@@ -13,7 +13,6 @@ import {
   updatePaperMetadata,
   updatePaperStatus,
   markPaperReady,
-  markPaperFailed,
   getPaperArxivId,
   insertSection,
   insertExtraction,
@@ -21,6 +20,11 @@ import {
   getSectionsForExtraction,
   findPaperIdByArxivId,
   insertCitation,
+  deleteAuthorLinksByPaperId,
+  deleteSectionsByPaperId,
+  deleteCitationsBySourcePaperId,
+  deleteExtractionsByPaperId,
+  deleteNonAuthorEntityLinksByPaperId,
 } from "@ronbun/database";
 import { storeHtml, storePdf } from "@ronbun/storage";
 import { upsertSectionEmbeddings } from "@ronbun/vector";
@@ -42,91 +46,84 @@ export async function processQueueMessage(
   }
 }
 
-async function processMetadata(
-  ctx: RonbunContext,
-  arxivId: string,
-  paperId: string,
-): Promise<void> {
-  try {
-    const metadata = await fetchArxivMetadata(arxivId);
-    await updatePaperMetadata(ctx.db, paperId, metadata);
+async function processMetadata(ctx: RonbunContext, arxivId: string, paperId: string): Promise<void> {
+  await deleteAuthorLinksByPaperId(ctx.db, paperId);
 
-    for (const author of metadata.authors) {
-      await insertEntityLink(ctx.db, generateId(), paperId, "author", author);
-    }
+  const metadata = await fetchArxivMetadata(arxivId);
+  await updatePaperMetadata(ctx.db, paperId, metadata);
 
-    await ctx.queue.send({
-      arxivId,
-      paperId,
-      step: "content",
-    } satisfies QueueMessage);
-  } catch (error) {
-    await markPaperFailed(ctx.db, paperId, error);
-    throw error;
+  for (const author of metadata.authors) {
+    await insertEntityLink(ctx.db, generateId(), paperId, "author", author);
   }
+
+  await ctx.queue.send({
+    arxivId,
+    paperId,
+    step: "content",
+  } satisfies QueueMessage);
 }
 
 async function processContent(ctx: RonbunContext, arxivId: string, paperId: string): Promise<void> {
-  try {
-    let parsedContent;
+  await deleteSectionsByPaperId(ctx.db, paperId);
+  await deleteCitationsBySourcePaperId(ctx.db, paperId);
 
-    const htmlContent = await fetchArxivHtml(arxivId);
-    if (htmlContent) {
-      await storeHtml(ctx.storage, arxivId, htmlContent);
-      parsedContent = parseHtmlContent(htmlContent);
-    }
+  let parsedContent;
 
-    if (!parsedContent) {
-      const pdfBuffer = await fetchArxivPdf(arxivId);
-      if (pdfBuffer) {
-        await storePdf(ctx.storage, arxivId, pdfBuffer);
-        const textContent = new TextDecoder().decode(pdfBuffer);
-        parsedContent = parsePdfText(textContent);
-      }
-    }
-
-    if (!parsedContent) {
-      throw new Error("Failed to fetch paper content (HTML and PDF both failed)");
-    }
-
-    for (const section of parsedContent.sections) {
-      await insertSection(
-        ctx.db,
-        generateId(),
-        paperId,
-        section.heading,
-        section.level,
-        section.content,
-        section.position,
-      );
-    }
-
-    for (const ref of parsedContent.references) {
-      if (ref.arxivId) {
-        const targetPaperId = await findPaperIdByArxivId(ctx.db, ref.arxivId);
-        await insertCitation(ctx.db, generateId(), paperId, targetPaperId, ref.arxivId, ref.title);
-      }
-    }
-
-    await updatePaperStatus(ctx.db, paperId, "parsed");
-
-    await ctx.queue.send({
-      arxivId,
-      paperId,
-      step: "extraction",
-    } satisfies QueueMessage);
-  } catch (error) {
-    await markPaperFailed(ctx.db, paperId, error);
-    throw error;
+  const htmlContent = await fetchArxivHtml(arxivId);
+  if (htmlContent) {
+    await storeHtml(ctx.storage, arxivId, htmlContent);
+    parsedContent = parseHtmlContent(htmlContent);
   }
+
+  if (!parsedContent) {
+    const pdfBuffer = await fetchArxivPdf(arxivId);
+    if (pdfBuffer) {
+      await storePdf(ctx.storage, arxivId, pdfBuffer);
+      const textContent = new TextDecoder().decode(pdfBuffer);
+      parsedContent = parsePdfText(textContent);
+    }
+  }
+
+  if (!parsedContent) {
+    throw new Error("Failed to fetch paper content (HTML and PDF both failed)");
+  }
+
+  for (const section of parsedContent.sections) {
+    await insertSection(
+      ctx.db,
+      generateId(),
+      paperId,
+      section.heading,
+      section.level,
+      section.content,
+      section.position,
+    );
+  }
+
+  for (const ref of parsedContent.references) {
+    if (ref.arxivId) {
+      const targetPaperId = await findPaperIdByArxivId(ctx.db, ref.arxivId);
+      await insertCitation(ctx.db, generateId(), paperId, targetPaperId, ref.arxivId, ref.title);
+    }
+  }
+
+  await updatePaperStatus(ctx.db, paperId, "parsed");
+
+  await ctx.queue.send({
+    arxivId,
+    paperId,
+    step: "extraction",
+  } satisfies QueueMessage);
 }
 
 async function processExtraction(ctx: RonbunContext, paperId: string): Promise<void> {
-  try {
-    const sections = await getSectionsForExtraction(ctx.db, paperId, 10);
+  await deleteExtractionsByPaperId(ctx.db, paperId);
+  await deleteNonAuthorEntityLinksByPaperId(ctx.db, paperId);
 
-    for (const section of sections) {
-      const prompt = `Extract structured knowledge from this research paper section as JSON.
+  const sections = await getSectionsForExtraction(ctx.db, paperId, 10);
+
+  for (const section of sections) {
+    const prompt = `Extract structured knowledge from this research paper section as JSON.
 
 Section: ${section.heading}
 Content: ${section.content.slice(0, 4000)}
@@ -142,97 +139,88 @@ Extract the following as JSON arrays with {name, detail} objects:
 
 Return only valid JSON with these keys.`;
 
-      try {
-        const response = await ctx.ai.run(
-          "@cf/meta/llama-3.1-8b-instruct" as Parameters<Ai["run"]>[0],
-          {
-            messages: [{ role: "user" as const, content: prompt }],
-          },
-        );
+    try {
+      const response = await ctx.ai.run(
+        "@cf/meta/llama-3.1-8b-instruct" as Parameters<Ai["run"]>[0],
+        {
+          messages: [{ role: "user" as const, content: prompt }],
+        },
+      );
 
-        const responseText =
-          typeof response === "string"
-            ? response
-            : "response" in (response as Record<string, unknown>)
-              ? ((response as Record<string, unknown>).response as string)
-              : "";
+      const responseText =
+        typeof response === "string"
+          ? response
+          : "response" in (response as Record<string, unknown>)
+            ? ((response as Record<string, unknown>).response as string)
+            : "";
 
-        const extracted = JSON.parse(responseText || "{}");
+      const extracted = JSON.parse(responseText || "{}");
 
-        const types = [
-          "methods",
-          "datasets",
-          "baselines",
-          "metrics",
-          "results",
-          "contributions",
-          "limitations",
-        ] as const;
-        const typeMap: Record<string, string> = {
-          methods: "method",
-          datasets: "dataset",
-          baselines: "baseline",
-          metrics: "metric",
-          results: "result",
-          contributions: "contribution",
-          limitations: "limitation",
-        };
+      const types = [
+        "methods",
+        "datasets",
+        "baselines",
+        "metrics",
+        "results",
+        "contributions",
+        "limitations",
+      ] as const;
+      const typeMap: Record<string, string> = {
+        methods: "method",
+        datasets: "dataset",
+        baselines: "baseline",
+        metrics: "metric",
+        results: "result",
+        contributions: "contribution",
+        limitations: "limitation",
+      };
 
-        for (const key of types) {
-          const items = extracted[key];
-          if (Array.isArray(items)) {
-            for (const item of items) {
-              if (item?.name) {
-                await insertExtraction(
+      for (const key of types) {
+        const items = extracted[key];
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            if (item?.name) {
+              await insertExtraction(
+                ctx.db,
+                generateId(),
+                paperId,
+                typeMap[key],
+                item.name,
+                item.detail ?? null,
+                section.id,
+              );
+              if (key === "methods" || key === "datasets") {
+                await insertEntityLink(
                   ctx.db,
                   generateId(),
                   paperId,
-                  typeMap[key],
+                  typeMap[key] as "method" | "dataset",
                   item.name,
-                  item.detail ?? null,
-                  section.id,
                 );
-                if (key === "methods" || key === "datasets") {
-                  await insertEntityLink(
-                    ctx.db,
-                    generateId(),
-                    paperId,
-                    typeMap[key] as "method" | "dataset",
-                    item.name,
-                  );
-                }
               }
             }
           }
         }
-      } catch (aiError) {
-        console.error("AI extraction failed for section:", section.id, aiError);
       }
+    } catch (aiError) {
+      console.error("AI extraction failed for section:", section.id, aiError);
     }
-
-    await updatePaperStatus(ctx.db, paperId, "extracted");
-
-    const arxivId = await getPaperArxivId(ctx.db, paperId);
-    if (!arxivId) throw new Error(`Paper not found: ${paperId}`);
-
-    await ctx.queue.send({
-      arxivId,
-      paperId,
-      step: "embedding",
-    } satisfies QueueMessage);
-  } catch (error) {
-    await markPaperFailed(ctx.db, paperId, error);
-    throw error;
   }
+
+  await updatePaperStatus(ctx.db, paperId, "extracted");
+
+  const arxivId = await getPaperArxivId(ctx.db, paperId);
+  if (!arxivId) throw new Error(`Paper not found: ${paperId}`);
+
+  await ctx.queue.send({
+    arxivId,
+    paperId,
+    step: "embedding",
+  } satisfies QueueMessage);
 }
 
 async function processEmbedding(ctx: RonbunContext, paperId: string): Promise<void> {
-  try {
-    const sections = await getSectionsForExtraction(ctx.db, paperId, 100);
-    await upsertSectionEmbeddings(ctx.vectorIndex, ctx.ai, paperId, sections);
-    await markPaperReady(ctx.db, paperId);
-  } catch (error) {
-    await markPaperFailed(ctx.db, paperId, error);
-    throw error;
-  }
+  const sections = await getSectionsForExtraction(ctx.db, paperId, 100);
+  await upsertSectionEmbeddings(ctx.vectorIndex, ctx.ai, paperId, sections);
+  await markPaperReady(ctx.db, paperId);
 }

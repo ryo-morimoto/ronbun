@@ -420,6 +420,96 @@ describe("Paper Ingestion Pipeline", () => {
     });
   });
 
+  describe("Idempotency (retry safety)", () => {
+    it("processMetadata twice does not duplicate author entity_links", async () => {
+      await env.DB.prepare(
+        "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)",
+      )
+        .bind("idem-meta", "2406.idem01", new Date().toISOString())
+        .run();
+
+      const mockQueue = createMockQueue();
+      const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
+      const msg: QueueMessage = { paperId: "idem-meta", arxivId: "2406.idem01", step: "metadata" };
+
+      await processQueueMessage(ctx, msg);
+      await processQueueMessage(ctx, msg); // retry
+
+      const links = await env.DB.prepare(
+        "SELECT * FROM entity_links WHERE paper_id = ? AND entity_type = 'author'",
+      )
+        .bind("idem-meta")
+        .all();
+      // Mock returns 2 authors — should still be 2, not 4
+      expect(links.results.length).toBe(2);
+    });
+
+    it("processContent twice does not duplicate sections", async () => {
+      await env.DB.prepare(
+        "INSERT INTO papers (id, arxiv_id, title, status, created_at) VALUES (?, ?, ?, 'metadata', ?)",
+      )
+        .bind("idem-content", "2406.idem02", "Test", new Date().toISOString())
+        .run();
+
+      const mockQueue = createMockQueue();
+      const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
+      const msg: QueueMessage = { paperId: "idem-content", arxivId: "2406.idem02", step: "content" };
+
+      await processQueueMessage(ctx, msg);
+      const countAfterFirst = await env.DB.prepare(
+        "SELECT COUNT(*) as cnt FROM sections WHERE paper_id = ?",
+      )
+        .bind("idem-content")
+        .first<{ cnt: number }>();
+
+      await processQueueMessage(ctx, msg); // retry
+      const countAfterSecond = await env.DB.prepare(
+        "SELECT COUNT(*) as cnt FROM sections WHERE paper_id = ?",
+      )
+        .bind("idem-content")
+        .first<{ cnt: number }>();
+
+      expect(countAfterSecond!.cnt).toBe(countAfterFirst!.cnt);
+    });
+
+    it("processExtraction twice does not duplicate extractions", async () => {
+      await env.DB.prepare(
+        "INSERT INTO papers (id, arxiv_id, title, status, created_at) VALUES (?, ?, ?, 'parsed', ?)",
+      )
+        .bind("idem-extract", "2406.idem03", "Test", new Date().toISOString())
+        .run();
+      await env.DB.prepare(
+        "INSERT INTO sections (id, paper_id, heading, level, content, position) VALUES (?, ?, ?, 1, ?, 0)",
+      )
+        .bind("idem-ext-sec", "idem-extract", "Methods", "Transformer approach.")
+        .run();
+
+      const mockQueue = createMockQueue();
+      const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
+      const msg: QueueMessage = {
+        paperId: "idem-extract",
+        arxivId: "2406.idem03",
+        step: "extraction",
+      };
+
+      await processQueueMessage(ctx, msg);
+      const countAfterFirst = await env.DB.prepare(
+        "SELECT COUNT(*) as cnt FROM extractions WHERE paper_id = ?",
+      )
+        .bind("idem-extract")
+        .first<{ cnt: number }>();
+
+      await processQueueMessage(ctx, msg); // retry
+      const countAfterSecond = await env.DB.prepare(
+        "SELECT COUNT(*) as cnt FROM extractions WHERE paper_id = ?",
+      )
+        .bind("idem-extract")
+        .first<{ cnt: number }>();
+
+      expect(countAfterSecond!.cnt).toBe(countAfterFirst!.cnt);
+    });
+  });
+
   describe("Full pipeline (end-to-end)", () => {
     it("runs all steps from ingest to ready", async () => {
       const mockQueue = createMockQueue();
