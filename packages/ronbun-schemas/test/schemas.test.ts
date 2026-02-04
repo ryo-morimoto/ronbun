@@ -15,8 +15,8 @@ describe("arxivIdSchema", () => {
   it("accepts valid arxiv IDs", () => {
     expect(arxivIdSchema.parse("2401.15884")).toBe("2401.15884");
     expect(arxivIdSchema.parse("2312.00001")).toBe("2312.00001");
-    expect(arxivIdSchema.parse("2401.15884v1")).toBe("2401.15884v1");
-    expect(arxivIdSchema.parse("2401.15884v12")).toBe("2401.15884v12");
+    expect(arxivIdSchema.parse("2401.15884v1")).toBe("2401.15884");
+    expect(arxivIdSchema.parse("2401.15884v12")).toBe("2401.15884");
   });
 
   it("rejects invalid arxiv IDs", () => {

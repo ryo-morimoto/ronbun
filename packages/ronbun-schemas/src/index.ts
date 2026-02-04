@@ -2,7 +2,8 @@ import { z } from "zod";
 
 export const arxivIdSchema = z
   .string()
-  .regex(/^\d{4}\.\d{4,5}(v\d+)?$/, "Invalid arxiv ID format (e.g. 2401.15884)");
+  .regex(/^\d{4}\.\d{4,5}(v\d+)?$/, "Invalid arxiv ID format (e.g. 2401.15884)")
+  .transform((id) => id.replace(/v\d+$/, ""));
 
 export const ingestPaperInput = z.object({
   arxivId: arxivIdSchema,

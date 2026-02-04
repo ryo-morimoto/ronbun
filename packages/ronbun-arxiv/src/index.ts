@@ -1,5 +1,5 @@
-export { fetchArxivMetadata, searchArxivPapers } from "./api.ts";
-export type { ArxivMetadata } from "./api.ts";
+export { fetchArxivMetadata, searchArxivPapers, searchArxivPapersWithMetadata } from "./api.ts";
+export type { ArxivMetadata, ArxivSearchResult } from "./api.ts";
 
 export {
   fetchArxivHtml,

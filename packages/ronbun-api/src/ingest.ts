@@ -18,11 +18,16 @@ export async function ingestPaper(
   const existing = await findPaperByArxivId(ctx.db, parsed.arxivId);
 
   if (existing) {
-    return {
-      status: existing.status,
-      paperId: existing.id,
-      message: "Paper already exists",
-    };
+    if (existing.status === "failed") {
+      // Delete the failed paper and re-ingest
+      await ctx.db.prepare("DELETE FROM papers WHERE id = ?").bind(existing.id).run();
+    } else {
+      return {
+        status: existing.status,
+        paperId: existing.id,
+        message: "Paper already exists",
+      };
+    }
   }
 
   const paperId = generateId();
