@@ -1,7 +1,4 @@
-export async function generateEmbedding(
-  ai: Ai,
-  text: string,
-): Promise<number[]> {
+export async function generateEmbedding(ai: Ai, text: string): Promise<number[]> {
   const response = await ai.run("@cf/baai/bge-large-en-v1.5", {
     text: [text],
   });

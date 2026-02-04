@@ -15,7 +15,9 @@ function createContext(env: Env): RonbunContext {
 
 export async function handleScheduled(env: Env): Promise<void> {
   const categories = env.ARXIV_CATEGORIES
-    ? env.ARXIV_CATEGORIES.split(",").map((c) => c.trim()).filter(Boolean)
+    ? env.ARXIV_CATEGORIES.split(",")
+        .map((c) => c.trim())
+        .filter(Boolean)
     : [];
 
   if (categories.length === 0) {

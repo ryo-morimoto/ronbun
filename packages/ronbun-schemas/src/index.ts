@@ -9,12 +9,14 @@ export const ingestPaperInput = z.object({
   arxivId: arxivIdSchema,
 });
 
-export const batchIngestInput = z.object({
-  arxivIds: z.array(arxivIdSchema).min(1).max(50).optional(),
-  searchQuery: z.string().min(1).max(200).optional(),
-}).refine((data) => data.arxivIds || data.searchQuery, {
-  message: "Either arxivIds or searchQuery must be provided",
-});
+export const batchIngestInput = z
+  .object({
+    arxivIds: z.array(arxivIdSchema).min(1).max(50).optional(),
+    searchQuery: z.string().min(1).max(200).optional(),
+  })
+  .refine((data) => data.arxivIds || data.searchQuery, {
+    message: "Either arxivIds or searchQuery must be provided",
+  });
 
 export const searchPapersInput = z.object({
   query: z.string().min(1).max(500),
@@ -40,13 +42,17 @@ export const listPapersInput = z.object({
 
 export const findRelatedInput = z.object({
   paperId: z.string().min(1),
-  linkTypes: z.array(z.enum(["citation", "cited_by", "shared_method", "shared_dataset", "shared_author"])).optional(),
+  linkTypes: z
+    .array(z.enum(["citation", "cited_by", "shared_method", "shared_dataset", "shared_author"]))
+    .optional(),
   limit: z.number().int().min(1).max(50).default(10),
 });
 
 export const searchExtractionsInput = z.object({
   query: z.string().min(1).max(500),
-  type: z.enum(["method", "dataset", "baseline", "metric", "result", "contribution", "limitation"]).optional(),
+  type: z
+    .enum(["method", "dataset", "baseline", "metric", "result", "contribution", "limitation"])
+    .optional(),
   limit: z.number().int().min(1).max(50).default(20),
 });
 

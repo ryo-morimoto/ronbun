@@ -45,24 +45,25 @@ beforeEach(() => {
 
 describe("fetchNewPapersByCategory", () => {
   it("fetches papers for a single category", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(SAMPLE_OAI_RESPONSE),
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(SAMPLE_OAI_RESPONSE),
+      }),
+    );
 
     const promise = fetchNewPapersByCategory(["cs.AI"], "2024-01-01", "2024-01-31");
     vi.runAllTimersAsync();
     const ids = await promise;
 
     expect(ids).toEqual(["2401.15884", "2401.15885"]);
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining("set=cs:AI"),
-      expect.anything(),
-    );
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("set=cs:AI"), expect.anything());
   });
 
   it("handles resumption token pagination", async () => {
-    const mockFetch = vi.fn()
+    const mockFetch = vi
+      .fn()
       .mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve(SAMPLE_OAI_WITH_RESUMPTION),
@@ -83,10 +84,13 @@ describe("fetchNewPapersByCategory", () => {
   });
 
   it("handles noRecordsMatch by returning empty", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(NO_RECORDS_RESPONSE),
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(NO_RECORDS_RESPONSE),
+      }),
+    );
 
     const promise = fetchNewPapersByCategory(["cs.AI"], "2024-01-01", "2024-01-31");
     await vi.runAllTimersAsync();
@@ -95,10 +99,13 @@ describe("fetchNewPapersByCategory", () => {
   });
 
   it("handles HTTP error by breaking category loop", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: false,
-      status: 503,
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+      }),
+    );
 
     const promise = fetchNewPapersByCategory(["cs.AI"], "2024-01-01", "2024-01-31");
     await vi.runAllTimersAsync();
@@ -107,7 +114,8 @@ describe("fetchNewPapersByCategory", () => {
   });
 
   it("deduplicates across categories", async () => {
-    const mockFetch = vi.fn()
+    const mockFetch = vi
+      .fn()
       .mockResolvedValueOnce({
         ok: true,
         text: () => Promise.resolve(SAMPLE_OAI_RESPONSE),

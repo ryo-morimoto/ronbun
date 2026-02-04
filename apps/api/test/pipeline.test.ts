@@ -1,5 +1,5 @@
 import { env } from "cloudflare:test";
-import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { applyMigration } from "./setup.ts";
 import type { QueueMessage } from "@ronbun/types";
 import type { RonbunContext } from "@ronbun/api";
@@ -40,14 +40,16 @@ const { fetchArxivMetadata, fetchArxivHtml } = await import("@ronbun/arxiv");
 function createMockQueue() {
   const messages: QueueMessage[] = [];
   return {
-    send: vi.fn(async (msg: QueueMessage) => { messages.push(msg); }),
+    send: vi.fn(async (msg: QueueMessage) => {
+      messages.push(msg);
+    }),
     messages,
   };
 }
 
 function createMockAi() {
   return {
-    run: vi.fn().mockImplementation(async (model: string, input: any) => {
+    run: vi.fn().mockImplementation(async (model: string, _input: any) => {
       if (model === "@cf/baai/bge-large-en-v1.5") {
         return { data: [Array(1024).fill(0.01)] };
       }
@@ -77,7 +79,9 @@ function createMockVectorIndex() {
 function createMockStorage() {
   const store = new Map<string, string | ArrayBuffer>();
   return {
-    put: vi.fn(async (key: string, value: string | ArrayBuffer) => { store.set(key, value); }),
+    put: vi.fn(async (key: string, value: string | ArrayBuffer) => {
+      store.set(key, value);
+    }),
     get: vi.fn(async (key: string) => {
       const v = store.get(key);
       if (v === undefined) return null;
@@ -117,7 +121,8 @@ describe("Paper Ingestion Pipeline", () => {
 
       // Verify DB insert
       const paper = await env.DB.prepare("SELECT * FROM papers WHERE arxiv_id = ?")
-        .bind("2406.00001").first();
+        .bind("2406.00001")
+        .first();
       expect(paper).not.toBeNull();
       expect(paper!.status).toBe("queued");
 
@@ -131,7 +136,9 @@ describe("Paper Ingestion Pipeline", () => {
       // Insert a ready paper
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'ready', ?)",
-      ).bind("existing-ready", "2406.00002", new Date().toISOString()).run();
+      )
+        .bind("existing-ready", "2406.00002", new Date().toISOString())
+        .run();
 
       const mockQueue = createMockQueue();
       const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
@@ -146,7 +153,9 @@ describe("Paper Ingestion Pipeline", () => {
     it("deletes failed paper and re-ingests", async () => {
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, status, error, created_at) VALUES (?, ?, 'failed', 'old error', ?)",
-      ).bind("existing-failed", "2406.00003", new Date().toISOString()).run();
+      )
+        .bind("existing-failed", "2406.00003", new Date().toISOString())
+        .run();
 
       const mockQueue = createMockQueue();
       const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
@@ -163,7 +172,9 @@ describe("Paper Ingestion Pipeline", () => {
       // Create a queued paper
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)",
-      ).bind("pm-1", "2406.10001", new Date().toISOString()).run();
+      )
+        .bind("pm-1", "2406.10001", new Date().toISOString())
+        .run();
 
       const mockQueue = createMockQueue();
       const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
@@ -175,8 +186,7 @@ describe("Paper Ingestion Pipeline", () => {
       });
 
       // Verify DB updated
-      const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
-        .bind("pm-1").first();
+      const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind("pm-1").first();
       expect(paper!.title).toBe("Test Paper: A Novel Approach");
       expect(paper!.status).toBe("metadata");
       expect(paper!.authors).toContain("Alice Smith");
@@ -184,7 +194,9 @@ describe("Paper Ingestion Pipeline", () => {
       // Verify entity links for authors
       const links = await env.DB.prepare(
         "SELECT * FROM entity_links WHERE paper_id = ? AND entity_type = 'author'",
-      ).bind("pm-1").all();
+      )
+        .bind("pm-1")
+        .all();
       expect(links.results.length).toBe(2);
 
       // Verify content step queued
@@ -196,18 +208,23 @@ describe("Paper Ingestion Pipeline", () => {
 
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)",
-      ).bind("pm-fail", "2406.10002", new Date().toISOString()).run();
+      )
+        .bind("pm-fail", "2406.10002", new Date().toISOString())
+        .run();
 
       const ctx = createContext();
 
-      await expect(processQueueMessage(ctx, {
-        paperId: "pm-fail",
-        arxivId: "2406.10002",
-        step: "metadata",
-      })).rejects.toThrow("API down");
+      await expect(
+        processQueueMessage(ctx, {
+          paperId: "pm-fail",
+          arxivId: "2406.10002",
+          step: "metadata",
+        }),
+      ).rejects.toThrow("API down");
 
       const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
-        .bind("pm-fail").first();
+        .bind("pm-fail")
+        .first();
       expect(paper!.status).toBe("failed");
       expect(paper!.error).toContain("API down");
     });
@@ -217,11 +234,16 @@ describe("Paper Ingestion Pipeline", () => {
     it("fetches HTML, stores in R2, inserts sections/citations, queues extraction", async () => {
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, title, status, created_at) VALUES (?, ?, ?, 'metadata', ?)",
-      ).bind("pc-1", "2406.20001", "Content Test Paper", new Date().toISOString()).run();
+      )
+        .bind("pc-1", "2406.20001", "Content Test Paper", new Date().toISOString())
+        .run();
 
       const mockQueue = createMockQueue();
       const mockStorage = createMockStorage();
-      const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage>, storage: mockStorage });
+      const ctx = createContext({
+        queue: mockQueue as unknown as Queue<QueueMessage>,
+        storage: mockStorage,
+      });
 
       await processQueueMessage(ctx, {
         paperId: "pc-1",
@@ -230,14 +252,15 @@ describe("Paper Ingestion Pipeline", () => {
       });
 
       // Verify status updated to parsed
-      const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
-        .bind("pc-1").first();
+      const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind("pc-1").first();
       expect(paper!.status).toBe("parsed");
 
       // Verify sections inserted
       const sections = await env.DB.prepare(
         "SELECT * FROM sections WHERE paper_id = ? ORDER BY position",
-      ).bind("pc-1").all();
+      )
+        .bind("pc-1")
+        .all();
       expect(sections.results.length).toBeGreaterThan(0);
 
       // Verify R2 storage (via mock)
@@ -252,18 +275,23 @@ describe("Paper Ingestion Pipeline", () => {
 
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'metadata', ?)",
-      ).bind("pc-fail", "2406.20002", new Date().toISOString()).run();
+      )
+        .bind("pc-fail", "2406.20002", new Date().toISOString())
+        .run();
 
       const ctx = createContext();
 
-      await expect(processQueueMessage(ctx, {
-        paperId: "pc-fail",
-        arxivId: "2406.20002",
-        step: "content",
-      })).rejects.toThrow("Failed to fetch paper content");
+      await expect(
+        processQueueMessage(ctx, {
+          paperId: "pc-fail",
+          arxivId: "2406.20002",
+          step: "content",
+        }),
+      ).rejects.toThrow("Failed to fetch paper content");
 
       const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
-        .bind("pc-fail").first();
+        .bind("pc-fail")
+        .first();
       expect(paper!.status).toBe("failed");
     });
   });
@@ -272,11 +300,15 @@ describe("Paper Ingestion Pipeline", () => {
     it("extracts knowledge from sections via AI, inserts extractions/entity_links", async () => {
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, title, status, created_at) VALUES (?, ?, ?, 'parsed', ?)",
-      ).bind("pe-1", "2406.30001", "Extraction Test", new Date().toISOString()).run();
+      )
+        .bind("pe-1", "2406.30001", "Extraction Test", new Date().toISOString())
+        .run();
 
       await env.DB.prepare(
         "INSERT INTO sections (id, paper_id, heading, level, content, position) VALUES (?, ?, ?, ?, ?, ?)",
-      ).bind("pe-sec-1", "pe-1", "Methods", 2, "We use a transformer-based approach.", 0).run();
+      )
+        .bind("pe-sec-1", "pe-1", "Methods", 2, "We use a transformer-based approach.", 0)
+        .run();
 
       const mockQueue = createMockQueue();
       const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
@@ -288,20 +320,21 @@ describe("Paper Ingestion Pipeline", () => {
       });
 
       // Verify status updated to extracted
-      const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
-        .bind("pe-1").first();
+      const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind("pe-1").first();
       expect(paper!.status).toBe("extracted");
 
       // Verify extractions inserted
-      const extractions = await env.DB.prepare(
-        "SELECT * FROM extractions WHERE paper_id = ?",
-      ).bind("pe-1").all();
+      const extractions = await env.DB.prepare("SELECT * FROM extractions WHERE paper_id = ?")
+        .bind("pe-1")
+        .all();
       expect(extractions.results.length).toBeGreaterThan(0);
 
       // Verify entity_links for methods/datasets
       const links = await env.DB.prepare(
         "SELECT * FROM entity_links WHERE paper_id = ? AND entity_type IN ('method', 'dataset')",
-      ).bind("pe-1").all();
+      )
+        .bind("pe-1")
+        .all();
       expect(links.results.length).toBeGreaterThan(0);
 
       // Verify embedding step queued
@@ -313,11 +346,15 @@ describe("Paper Ingestion Pipeline", () => {
     it("generates embeddings and marks paper as ready", async () => {
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, title, status, created_at) VALUES (?, ?, ?, 'extracted', ?)",
-      ).bind("pemb-1", "2406.40001", "Embedding Test", new Date().toISOString()).run();
+      )
+        .bind("pemb-1", "2406.40001", "Embedding Test", new Date().toISOString())
+        .run();
 
       await env.DB.prepare(
         "INSERT INTO sections (id, paper_id, heading, level, content, position) VALUES (?, ?, ?, ?, ?, ?)",
-      ).bind("pemb-sec-1", "pemb-1", "Introduction", 1, "Test section content for embedding.", 0).run();
+      )
+        .bind("pemb-sec-1", "pemb-1", "Introduction", 1, "Test section content for embedding.", 0)
+        .run();
 
       const mockVectorIndex = createMockVectorIndex();
       const ctx = createContext({ vectorIndex: mockVectorIndex });
@@ -330,7 +367,8 @@ describe("Paper Ingestion Pipeline", () => {
 
       // Verify status = ready with ingested_at
       const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
-        .bind("pemb-1").first();
+        .bind("pemb-1")
+        .first();
       expect(paper!.status).toBe("ready");
       expect(paper!.ingested_at).not.toBeNull();
 
@@ -341,11 +379,22 @@ describe("Paper Ingestion Pipeline", () => {
     it("still marks paper as ready when individual embedding generation fails (graceful degradation)", async () => {
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, title, status, created_at) VALUES (?, ?, ?, 'extracted', ?)",
-      ).bind("pemb-degrade", "2406.40002", "Embed Degrade Test", new Date().toISOString()).run();
+      )
+        .bind("pemb-degrade", "2406.40002", "Embed Degrade Test", new Date().toISOString())
+        .run();
 
       await env.DB.prepare(
         "INSERT INTO sections (id, paper_id, heading, level, content, position) VALUES (?, ?, ?, ?, ?, ?)",
-      ).bind("pemb-degrade-sec", "pemb-degrade", "Intro", 1, "Some content for the embedding test.", 0).run();
+      )
+        .bind(
+          "pemb-degrade-sec",
+          "pemb-degrade",
+          "Intro",
+          1,
+          "Some content for the embedding test.",
+          0,
+        )
+        .run();
 
       const failAi = {
         run: vi.fn().mockRejectedValue(new Error("embedding model error")),
@@ -363,7 +412,8 @@ describe("Paper Ingestion Pipeline", () => {
       });
 
       const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
-        .bind("pemb-degrade").first();
+        .bind("pemb-degrade")
+        .first();
       expect(paper!.status).toBe("ready");
       // upsert should not have been called since all embeddings failed
       expect(mockVectorIndex.upsert).not.toHaveBeenCalled();
@@ -407,11 +457,15 @@ describe("Paper Ingestion Pipeline", () => {
       expect(paper!.title).toBe("Test Paper: A Novel Approach");
 
       // Verify sections exist
-      const sections = await env.DB.prepare("SELECT * FROM sections WHERE paper_id = ?").bind(paperId).all();
+      const sections = await env.DB.prepare("SELECT * FROM sections WHERE paper_id = ?")
+        .bind(paperId)
+        .all();
       expect(sections.results.length).toBeGreaterThan(0);
 
       // Verify extractions exist
-      const extractions = await env.DB.prepare("SELECT * FROM extractions WHERE paper_id = ?").bind(paperId).all();
+      const extractions = await env.DB.prepare("SELECT * FROM extractions WHERE paper_id = ?")
+        .bind(paperId)
+        .all();
       expect(extractions.results.length).toBeGreaterThan(0);
 
       // Verify vector upsert was called

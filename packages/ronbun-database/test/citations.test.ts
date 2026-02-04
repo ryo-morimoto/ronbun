@@ -38,9 +38,20 @@ describe("citations", () => {
     it("finds incoming citations", async () => {
       await insertPaper(env.DB, "cp-cited-1", "2801.00011");
       await insertPaper(env.DB, "cp-cited-2", "2801.00012");
-      await env.DB.prepare(`UPDATE papers SET title = 'Citing Paper' WHERE id = ?`).bind("cp-cited-1").run();
-      await env.DB.prepare(`UPDATE papers SET title = 'Cited Paper' WHERE id = ?`).bind("cp-cited-2").run();
-      await insertCitation(env.DB, "cit-test", "cp-cited-1", "cp-cited-2", "2801.00012", "Cited Paper");
+      await env.DB.prepare(`UPDATE papers SET title = 'Citing Paper' WHERE id = ?`)
+        .bind("cp-cited-1")
+        .run();
+      await env.DB.prepare(`UPDATE papers SET title = 'Cited Paper' WHERE id = ?`)
+        .bind("cp-cited-2")
+        .run();
+      await insertCitation(
+        env.DB,
+        "cit-test",
+        "cp-cited-1",
+        "cp-cited-2",
+        "2801.00012",
+        "Cited Paper",
+      );
 
       const citedBy = await getCitedBy(env.DB, "cp-cited-2");
       expect(citedBy.length).toBe(1);

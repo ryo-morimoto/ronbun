@@ -35,7 +35,14 @@ export type ExtractionRow = {
   created_at: string;
 };
 
-export type ExtractionType = "method" | "dataset" | "baseline" | "metric" | "result" | "contribution" | "limitation";
+export type ExtractionType =
+  | "method"
+  | "dataset"
+  | "baseline"
+  | "metric"
+  | "result"
+  | "contribution"
+  | "limitation";
 
 export type CitationRow = {
   id: string;

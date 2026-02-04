@@ -12,7 +12,11 @@ export function createClient() {
 
 export type Client = ReturnType<typeof createClient>;
 
-export async function handleResponse<T>(res: { ok: boolean; status: number; json(): Promise<unknown> }): Promise<T> {
+export async function handleResponse<T>(res: {
+  ok: boolean;
+  status: number;
+  json(): Promise<unknown>;
+}): Promise<T> {
   if (res.ok) {
     return (await res.json()) as T;
   }
@@ -21,10 +25,12 @@ export async function handleResponse<T>(res: { ok: boolean; status: number; json
   }
   if (res.status >= 500) {
     const body = await res.json().catch(() => null);
-    const msg = body && typeof body === "object" && "error" in body ? (body as any).error : `${res.status}`;
+    const msg =
+      body && typeof body === "object" && "error" in body ? (body as any).error : `${res.status}`;
     throw new Error(`Server error: ${msg}`);
   }
   const body = await res.json().catch(() => null);
-  const msg = body && typeof body === "object" && "error" in body ? (body as any).error : `${res.status}`;
+  const msg =
+    body && typeof body === "object" && "error" in body ? (body as any).error : `${res.status}`;
   throw new Error(msg);
 }

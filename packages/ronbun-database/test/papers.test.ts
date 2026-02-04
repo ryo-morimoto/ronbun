@@ -1,5 +1,5 @@
 import { env } from "cloudflare:test";
-import { describe, it, expect, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { applyMigration } from "./helper.ts";
 import {
   findPaperByArxivId,
@@ -132,7 +132,16 @@ describe("papers", () => {
         await env.DB.prepare(
           `INSERT INTO papers (id, arxiv_id, title, categories, published_at, status, created_at)
            VALUES (?, ?, ?, ?, ?, 'ready', ?)`,
-        ).bind(id, arxiv, title, `["${cat}"]`, `${year}-06-01T00:00:00Z`, `${year}-06-01T00:00:00Z`).run();
+        )
+          .bind(
+            id,
+            arxiv,
+            title,
+            `["${cat}"]`,
+            `${year}-06-01T00:00:00Z`,
+            `${year}-06-01T00:00:00Z`,
+          )
+          .run();
       }
     });
 
@@ -220,7 +229,15 @@ describe("papers", () => {
       await env.DB.prepare(
         `INSERT INTO papers (id, arxiv_id, title, abstract, status, created_at)
          VALUES (?, ?, ?, ?, 'ready', ?)`,
-      ).bind("p-fts-1", "2501.00001", "Deep Learning Survey", "A comprehensive survey of deep learning methods.", "2025-01-01T00:00:00Z").run();
+      )
+        .bind(
+          "p-fts-1",
+          "2501.00001",
+          "Deep Learning Survey",
+          "A comprehensive survey of deep learning methods.",
+          "2025-01-01T00:00:00Z",
+        )
+        .run();
     });
 
     it("finds papers matching FTS query", async () => {
@@ -239,11 +256,22 @@ describe("papers", () => {
     beforeAll(async () => {
       await env.DB.prepare(
         `INSERT INTO papers (id, arxiv_id, title, status, created_at) VALUES (?, ?, ?, 'ready', ?)`,
-      ).bind("p-secfts", "2501.00002", "Section FTS Paper", "2025-01-01T00:00:00Z").run();
+      )
+        .bind("p-secfts", "2501.00002", "Section FTS Paper", "2025-01-01T00:00:00Z")
+        .run();
 
       await env.DB.prepare(
         `INSERT INTO sections (id, paper_id, heading, level, content, position) VALUES (?, ?, ?, ?, ?, ?)`,
-      ).bind("sec-fts-1", "p-secfts", "Transformers", 1, "Attention is all you need. Transformers architecture.", 0).run();
+      )
+        .bind(
+          "sec-fts-1",
+          "p-secfts",
+          "Transformers",
+          1,
+          "Attention is all you need. Transformers architecture.",
+          0,
+        )
+        .run();
     });
 
     it("finds papers via section content match", async () => {
@@ -257,11 +285,15 @@ describe("papers", () => {
       await env.DB.prepare(
         `INSERT INTO papers (id, arxiv_id, title, status, created_at)
          VALUES (?, ?, ?, 'ready', ?)`,
-      ).bind("p-fetch-1", "2501.00011", "Fetch Test 1", "2025-01-01T00:00:00Z").run();
+      )
+        .bind("p-fetch-1", "2501.00011", "Fetch Test 1", "2025-01-01T00:00:00Z")
+        .run();
       await env.DB.prepare(
         `INSERT INTO papers (id, arxiv_id, title, status, created_at)
          VALUES (?, ?, ?, 'ready', ?)`,
-      ).bind("p-fetch-2", "2501.00012", "Fetch Test 2", "2025-01-01T00:00:00Z").run();
+      )
+        .bind("p-fetch-2", "2501.00012", "Fetch Test 2", "2025-01-01T00:00:00Z")
+        .run();
 
       const results = await fetchPapersByIds(env.DB, ["p-fetch-1", "p-fetch-2"]);
       expect(results.length).toBe(2);

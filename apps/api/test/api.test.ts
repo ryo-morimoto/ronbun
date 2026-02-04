@@ -94,7 +94,9 @@ describe("GET /api/papers", () => {
       { headers: authHeaders() },
     );
     expect(res.status).toBe(200);
-    const body = await res.json<{ papers: Array<{ arxiv_id: string; published_at: string | null }> }>();
+    const body = await res.json<{
+      papers: Array<{ arxiv_id: string; published_at: string | null }>;
+    }>();
     // Verify ascending order: each paper's published_at <= next
     for (let i = 1; i < body.papers.length; i++) {
       const prev = body.papers[i - 1].published_at ?? "";
@@ -107,7 +109,9 @@ describe("GET /api/papers", () => {
     const res = await fetchApp("http://localhost/api/papers?status=ready", {
       headers: authHeaders(),
     });
-    const body = await res.json<{ papers: Array<{ arxiv_id: string; authors: string[]; categories: string[] }> }>();
+    const body = await res.json<{
+      papers: Array<{ arxiv_id: string; authors: string[]; categories: string[] }>;
+    }>();
     const paper = body.papers.find((p) => p.arxiv_id === "2401.15884");
     expect(paper).toBeDefined();
     expect(Array.isArray(paper!.authors)).toBe(true);
@@ -233,10 +237,9 @@ describe("GET /api/papers/:id/related", () => {
   });
 
   it("finds related via citation link type", async () => {
-    const res = await fetchApp(
-      "http://localhost/api/papers/paper-1/related?linkTypes=citation",
-      { headers: authHeaders() },
-    );
+    const res = await fetchApp("http://localhost/api/papers/paper-1/related?linkTypes=citation", {
+      headers: authHeaders(),
+    });
     expect(res.status).toBe(200);
     const body = await res.json<{ relatedPapers: Array<{ linkType: string }> }>();
     for (const r of body.relatedPapers) {

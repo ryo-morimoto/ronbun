@@ -43,7 +43,13 @@ describe("extractions command", () => {
     mockClient.api.extractions.search.$post.mockResolvedValue(
       mockResponse({
         extractions: [
-          { type: "method", name: "CRAG", detail: "Corrective RAG", paper_title: "Test Paper", arxiv_id: "2401.15884" },
+          {
+            type: "method",
+            name: "CRAG",
+            detail: "Corrective RAG",
+            paper_title: "Test Paper",
+            arxiv_id: "2401.15884",
+          },
         ],
       }),
     );
@@ -51,13 +57,13 @@ describe("extractions command", () => {
     const extractionsCommand = (await import("../../src/commands/extractions.ts")).default;
     await extractionsCommand.run!({ args: { query: "CRAG", limit: "10" } } as any);
 
-    expect(output.logs.some((l: string) => l.includes("Corrective RAG") || l.includes("method"))).toBe(true);
+    expect(
+      output.logs.some((l: string) => l.includes("Corrective RAG") || l.includes("method")),
+    ).toBe(true);
   });
 
   it("shows 'no extractions found' for empty results", async () => {
-    mockClient.api.extractions.search.$post.mockResolvedValue(
-      mockResponse({ extractions: [] }),
-    );
+    mockClient.api.extractions.search.$post.mockResolvedValue(mockResponse({ extractions: [] }));
 
     const extractionsCommand = (await import("../../src/commands/extractions.ts")).default;
     await extractionsCommand.run!({ args: { query: "noresult", limit: "10" } } as any);

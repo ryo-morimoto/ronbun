@@ -48,10 +48,12 @@ function parseArxivXml(xml: string, arxivId: string): ArxivMetadata {
   const authors = authorBlocks.map((block) => getTag("name", block));
 
   const categoryMatches = entry.match(/category[^>]*term="([^"]+)"/g) || [];
-  const categories = categoryMatches.map((c) => {
-    const m = c.match(/term="([^"]+)"/);
-    return m ? m[1] : "";
-  }).filter(Boolean);
+  const categories = categoryMatches
+    .map((c) => {
+      const m = c.match(/term="([^"]+)"/);
+      return m ? m[1] : "";
+    })
+    .filter(Boolean);
 
   return { title, authors, abstract, categories, publishedAt, updatedAt };
 }
@@ -126,10 +128,12 @@ function parseArxivSearchResults(xml: string): ArxivSearchResult[] {
     const authors = authorBlocks.map((block) => getTag("name", block));
 
     const categoryMatches = entry.match(/category[^>]*term="([^"]+)"/g) || [];
-    const categories = categoryMatches.map((c) => {
-      const m = c.match(/term="([^"]+)"/);
-      return m ? m[1] : "";
-    }).filter(Boolean);
+    const categories = categoryMatches
+      .map((c) => {
+        const m = c.match(/term="([^"]+)"/);
+        return m ? m[1] : "";
+      })
+      .filter(Boolean);
 
     const idTag = getTag("id", entry);
     const idMatch = idTag.match(/arxiv\.org\/abs\/(\d{4}\.\d{4,5})/);

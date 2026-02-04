@@ -23,7 +23,7 @@ import {
   insertCitation,
 } from "@ronbun/database";
 import { storeHtml, storePdf } from "@ronbun/storage";
-import { upsertSectionEmbeddings, generateEmbedding } from "@ronbun/vector";
+import { upsertSectionEmbeddings } from "@ronbun/vector";
 
 export async function processQueueMessage(
   ctx: RonbunContext,
@@ -66,11 +66,7 @@ async function processMetadata(
   }
 }
 
-async function processContent(
-  ctx: RonbunContext,
-  arxivId: string,
-  paperId: string,
-): Promise<void> {
+async function processContent(ctx: RonbunContext, arxivId: string, paperId: string): Promise<void> {
   try {
     let parsedContent;
 
@@ -108,14 +104,7 @@ async function processContent(
     for (const ref of parsedContent.references) {
       if (ref.arxivId) {
         const targetPaperId = await findPaperIdByArxivId(ctx.db, ref.arxivId);
-        await insertCitation(
-          ctx.db,
-          generateId(),
-          paperId,
-          targetPaperId,
-          ref.arxivId,
-          ref.title,
-        );
+        await insertCitation(ctx.db, generateId(), paperId, targetPaperId, ref.arxivId, ref.title);
       }
     }
 
@@ -132,10 +121,7 @@ async function processContent(
   }
 }
 
-async function processExtraction(
-  ctx: RonbunContext,
-  paperId: string,
-): Promise<void> {
+async function processExtraction(ctx: RonbunContext, paperId: string): Promise<void> {
   try {
     const sections = await getSectionsForExtraction(ctx.db, paperId, 10);
 
@@ -174,11 +160,22 @@ Return only valid JSON with these keys.`;
         const extracted = JSON.parse(responseText || "{}");
 
         const types = [
-          "methods", "datasets", "baselines", "metrics", "results", "contributions", "limitations",
+          "methods",
+          "datasets",
+          "baselines",
+          "metrics",
+          "results",
+          "contributions",
+          "limitations",
         ] as const;
         const typeMap: Record<string, string> = {
-          methods: "method", datasets: "dataset", baselines: "baseline",
-          metrics: "metric", results: "result", contributions: "contribution", limitations: "limitation",
+          methods: "method",
+          datasets: "dataset",
+          baselines: "baseline",
+          metrics: "metric",
+          results: "result",
+          contributions: "contribution",
+          limitations: "limitation",
         };
 
         for (const key of types) {
@@ -186,9 +183,23 @@ Return only valid JSON with these keys.`;
           if (Array.isArray(items)) {
             for (const item of items) {
               if (item?.name) {
-                await insertExtraction(ctx.db, generateId(), paperId, typeMap[key], item.name, item.detail ?? null, section.id);
+                await insertExtraction(
+                  ctx.db,
+                  generateId(),
+                  paperId,
+                  typeMap[key],
+                  item.name,
+                  item.detail ?? null,
+                  section.id,
+                );
                 if (key === "methods" || key === "datasets") {
-                  await insertEntityLink(ctx.db, generateId(), paperId, typeMap[key] as "method" | "dataset", item.name);
+                  await insertEntityLink(
+                    ctx.db,
+                    generateId(),
+                    paperId,
+                    typeMap[key] as "method" | "dataset",
+                    item.name,
+                  );
                 }
               }
             }
@@ -215,10 +226,7 @@ Return only valid JSON with these keys.`;
   }
 }
 
-async function processEmbedding(
-  ctx: RonbunContext,
-  paperId: string,
-): Promise<void> {
+async function processEmbedding(ctx: RonbunContext, paperId: string): Promise<void> {
   try {
     const sections = await getSectionsForExtraction(ctx.db, paperId, 100);
     await upsertSectionEmbeddings(ctx.vectorIndex, ctx.ai, paperId, sections);

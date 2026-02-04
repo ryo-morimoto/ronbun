@@ -68,9 +68,7 @@ describe("batchIngestInput", () => {
   });
 
   it("rejects more than 50 arxivIds", () => {
-    const ids = Array.from({ length: 51 }, (_, i) =>
-      `2401.${String(i).padStart(5, "0")}`,
-    );
+    const ids = Array.from({ length: 51 }, (_, i) => `2401.${String(i).padStart(5, "0")}`);
     expect(() => batchIngestInput.parse({ arxivIds: ids })).toThrow();
   });
 });
@@ -101,9 +99,7 @@ describe("searchPapersInput", () => {
   });
 
   it("rejects limit > 50", () => {
-    expect(() =>
-      searchPapersInput.parse({ query: "test", limit: 51 }),
-    ).toThrow();
+    expect(() => searchPapersInput.parse({ query: "test", limit: 51 })).toThrow();
   });
 });
 
@@ -140,9 +136,7 @@ describe("listPapersInput", () => {
   });
 
   it("rejects invalid status", () => {
-    expect(() =>
-      listPapersInput.parse({ status: "invalid" }),
-    ).toThrow();
+    expect(() => listPapersInput.parse({ status: "invalid" })).toThrow();
   });
 });
 
@@ -176,9 +170,7 @@ describe("searchExtractionsInput", () => {
   });
 
   it("rejects invalid type", () => {
-    expect(() =>
-      searchExtractionsInput.parse({ query: "test", type: "invalid" }),
-    ).toThrow();
+    expect(() => searchExtractionsInput.parse({ query: "test", type: "invalid" })).toThrow();
   });
 });
 

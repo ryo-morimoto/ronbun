@@ -2,11 +2,7 @@ import { env } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
 import { applyMigration } from "./helper.ts";
 import { insertPaper } from "../src/papers.ts";
-import {
-  insertEntityLink,
-  getRelatedPapers,
-  findSharedEntities,
-} from "../src/entity-links.ts";
+import { insertEntityLink, getRelatedPapers, findSharedEntities } from "../src/entity-links.ts";
 
 beforeAll(async () => {
   await applyMigration(env.DB);
@@ -45,8 +41,12 @@ describe("entity-links", () => {
     it("finds shared entities filtered by type", async () => {
       await insertPaper(env.DB, "elp-s1", "2901.00011");
       await insertPaper(env.DB, "elp-s2", "2901.00012");
-      await env.DB.prepare(`UPDATE papers SET title = 'Paper S1' WHERE id = ?`).bind("elp-s1").run();
-      await env.DB.prepare(`UPDATE papers SET title = 'Paper S2' WHERE id = ?`).bind("elp-s2").run();
+      await env.DB.prepare(`UPDATE papers SET title = 'Paper S1' WHERE id = ?`)
+        .bind("elp-s1")
+        .run();
+      await env.DB.prepare(`UPDATE papers SET title = 'Paper S2' WHERE id = ?`)
+        .bind("elp-s2")
+        .run();
       await insertEntityLink(env.DB, "el-s1", "elp-s1", "method", "BERT");
       await insertEntityLink(env.DB, "el-s2", "elp-s2", "method", "BERT");
 
@@ -59,8 +59,12 @@ describe("entity-links", () => {
     it("returns different results for different entity types", async () => {
       await insertPaper(env.DB, "elp-s3", "2901.00013");
       await insertPaper(env.DB, "elp-s4", "2901.00014");
-      await env.DB.prepare(`UPDATE papers SET title = 'Paper S3' WHERE id = ?`).bind("elp-s3").run();
-      await env.DB.prepare(`UPDATE papers SET title = 'Paper S4' WHERE id = ?`).bind("elp-s4").run();
+      await env.DB.prepare(`UPDATE papers SET title = 'Paper S3' WHERE id = ?`)
+        .bind("elp-s3")
+        .run();
+      await env.DB.prepare(`UPDATE papers SET title = 'Paper S4' WHERE id = ?`)
+        .bind("elp-s4")
+        .run();
       await insertEntityLink(env.DB, "el-s3", "elp-s3", "dataset", "COCO");
       await insertEntityLink(env.DB, "el-s4", "elp-s4", "dataset", "COCO");
 

@@ -207,7 +207,14 @@ export async function seedTestData(db: D1Database) {
     .prepare(
       `INSERT OR IGNORE INTO extractions (id, paper_id, type, name, detail, section_id) VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .bind("ext-1", "paper-1", "method", "CRAG", "Corrective retrieval augmented generation", "sec-2")
+    .bind(
+      "ext-1",
+      "paper-1",
+      "method",
+      "CRAG",
+      "Corrective retrieval augmented generation",
+      "sec-2",
+    )
     .run();
 
   await db

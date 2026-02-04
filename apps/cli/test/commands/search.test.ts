@@ -51,7 +51,12 @@ describe("search command", () => {
     mockClient.api.papers.search.$post.mockResolvedValue(
       mockResponse({
         papers: [
-          { arxiv_id: "2401.15884", title: "Test Paper", categories: ["cs.AI"], published_at: "2024-01-28" },
+          {
+            arxiv_id: "2401.15884",
+            title: "Test Paper",
+            categories: ["cs.AI"],
+            published_at: "2024-01-28",
+          },
         ],
       }),
     );
@@ -63,9 +68,7 @@ describe("search command", () => {
   });
 
   it("offers arXiv fallback when no local results", async () => {
-    mockClient.api.papers.search.$post.mockResolvedValue(
-      mockResponse({ papers: [] }),
-    );
+    mockClient.api.papers.search.$post.mockResolvedValue(mockResponse({ papers: [] }));
 
     const searchCommand = (await import("../../src/commands/search.ts")).default;
     await searchCommand.run!({ args: { query: "noresult", limit: "10" } } as any);

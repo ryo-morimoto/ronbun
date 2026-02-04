@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchArxivMetadata, searchArxivPapers, searchArxivPapersWithMetadata } from "../src/api.ts";
+import {
+  fetchArxivMetadata,
+  searchArxivPapers,
+  searchArxivPapersWithMetadata,
+} from "../src/api.ts";
 
 const SAMPLE_ENTRY_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
@@ -48,10 +52,13 @@ beforeEach(() => {
 
 describe("fetchArxivMetadata", () => {
   it("parses metadata from valid XML response", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(SAMPLE_ENTRY_XML),
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(SAMPLE_ENTRY_XML),
+      }),
+    );
 
     const metadata = await fetchArxivMetadata("2401.15884");
     expect(metadata.title).toBe("Corrective Retrieval Augmented Generation");
@@ -65,19 +72,25 @@ describe("fetchArxivMetadata", () => {
   });
 
   it("throws when no entry found", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(EMPTY_FEED_XML),
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(EMPTY_FEED_XML),
+      }),
+    );
 
     await expect(fetchArxivMetadata("9999.99999")).rejects.toThrow("No entry found");
   });
 
   it("throws on HTTP error", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: false,
-      status: 503,
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+      }),
+    );
 
     await expect(fetchArxivMetadata("2401.15884")).rejects.toThrow("arxiv API returned 503");
   });
@@ -85,10 +98,13 @@ describe("fetchArxivMetadata", () => {
 
 describe("searchArxivPapers", () => {
   it("extracts arxiv IDs from search results", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(SAMPLE_SEARCH_XML),
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(SAMPLE_SEARCH_XML),
+      }),
+    );
 
     const ids = await searchArxivPapers("retrieval augmented generation");
     expect(ids).toEqual(["2401.15884", "2312.10997"]);
@@ -99,20 +115,26 @@ describe("searchArxivPapers", () => {
       "</feed>",
       `<entry><id>http://arxiv.org/abs/2401.15884v2</id></entry></feed>`,
     );
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(xmlWithDuplicates),
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(xmlWithDuplicates),
+      }),
+    );
 
     const ids = await searchArxivPapers("test");
     expect(ids.filter((id) => id === "2401.15884").length).toBe(1);
   });
 
   it("throws on HTTP error", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+      }),
+    );
 
     await expect(searchArxivPapers("test")).rejects.toThrow("arxiv search API returned 500");
   });
@@ -120,10 +142,13 @@ describe("searchArxivPapers", () => {
 
 describe("searchArxivPapersWithMetadata", () => {
   it("parses full metadata from search results", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(SAMPLE_SEARCH_XML),
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(SAMPLE_SEARCH_XML),
+      }),
+    );
 
     const results = await searchArxivPapersWithMetadata("test");
     expect(results.length).toBe(2);
@@ -139,11 +164,16 @@ describe("searchArxivPapersWithMetadata", () => {
   });
 
   it("throws on HTTP error", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: false,
-      status: 429,
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+      }),
+    );
 
-    await expect(searchArxivPapersWithMetadata("test")).rejects.toThrow("arxiv search API returned 429");
+    await expect(searchArxivPapersWithMetadata("test")).rejects.toThrow(
+      "arxiv search API returned 429",
+    );
   });
 });

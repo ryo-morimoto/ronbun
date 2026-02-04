@@ -2,11 +2,7 @@ import { env } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
 import { applyMigration } from "./helper.ts";
 import { insertPaper } from "../src/papers.ts";
-import {
-  getSectionsByPaperId,
-  insertSection,
-  getSectionsForExtraction,
-} from "../src/sections.ts";
+import { getSectionsByPaperId, insertSection, getSectionsForExtraction } from "../src/sections.ts";
 
 beforeAll(async () => {
   await applyMigration(env.DB);

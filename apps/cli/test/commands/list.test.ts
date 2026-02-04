@@ -41,8 +41,18 @@ describe("list command", () => {
     mockClient.api.papers.$get.mockResolvedValue(
       mockResponse({
         papers: [
-          { arxiv_id: "2401.15884", title: "Paper A", categories: ["cs.AI"], published_at: "2024-01-28" },
-          { arxiv_id: "2312.10997", title: "Paper B", categories: ["cs.CL"], published_at: "2023-12-15" },
+          {
+            arxiv_id: "2401.15884",
+            title: "Paper A",
+            categories: ["cs.AI"],
+            published_at: "2024-01-28",
+          },
+          {
+            arxiv_id: "2312.10997",
+            title: "Paper B",
+            categories: ["cs.CL"],
+            published_at: "2023-12-15",
+          },
         ],
         hasMore: false,
         cursor: null,
@@ -57,9 +67,7 @@ describe("list command", () => {
   });
 
   it("shows 'no papers found' for empty results", async () => {
-    mockClient.api.papers.$get.mockResolvedValue(
-      mockResponse({ papers: [], hasMore: false }),
-    );
+    mockClient.api.papers.$get.mockResolvedValue(mockResponse({ papers: [], hasMore: false }));
 
     const listCommand = (await import("../../src/commands/list.ts")).default;
     await listCommand.run!({ args: { limit: "20" } } as any);
@@ -68,12 +76,12 @@ describe("list command", () => {
   });
 
   it("passes filter parameters", async () => {
-    mockClient.api.papers.$get.mockResolvedValue(
-      mockResponse({ papers: [], hasMore: false }),
-    );
+    mockClient.api.papers.$get.mockResolvedValue(mockResponse({ papers: [], hasMore: false }));
 
     const listCommand = (await import("../../src/commands/list.ts")).default;
-    await listCommand.run!({ args: { limit: "20", status: "ready", category: "cs.AI", year: "2024" } } as any);
+    await listCommand.run!({
+      args: { limit: "20", status: "ready", category: "cs.AI", year: "2024" },
+    } as any);
 
     expect(mockClient.api.papers.$get).toHaveBeenCalledTimes(1);
   });

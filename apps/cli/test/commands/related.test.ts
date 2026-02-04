@@ -43,7 +43,13 @@ describe("related command", () => {
     mockClient.api.papers[":id"].related.$get.mockResolvedValue(
       mockResponse({
         papers: [
-          { arxiv_id: "2312.10997", title: "Related Paper", linkType: "shared_method", categories: ["cs.CL"], published_at: "2023-12-15" },
+          {
+            arxiv_id: "2312.10997",
+            title: "Related Paper",
+            linkType: "shared_method",
+            categories: ["cs.CL"],
+            published_at: "2023-12-15",
+          },
         ],
       }),
     );
@@ -55,9 +61,7 @@ describe("related command", () => {
   });
 
   it("shows 'no related papers found' for empty results", async () => {
-    mockClient.api.papers[":id"].related.$get.mockResolvedValue(
-      mockResponse({ papers: [] }),
-    );
+    mockClient.api.papers[":id"].related.$get.mockResolvedValue(mockResponse({ papers: [] }));
 
     const relatedCommand = (await import("../../src/commands/related.ts")).default;
     await relatedCommand.run!({ args: { id: "2401.15884", limit: "10" } } as any);

@@ -1,9 +1,6 @@
 import type { SectionRow } from "@ronbun/types";
 
-export async function getSectionsByPaperId(
-  db: D1Database,
-  paperId: string,
-): Promise<SectionRow[]> {
+export async function getSectionsByPaperId(db: D1Database, paperId: string): Promise<SectionRow[]> {
   const result = await db
     .prepare("SELECT * FROM sections WHERE paper_id = ? ORDER BY position")
     .bind(paperId)

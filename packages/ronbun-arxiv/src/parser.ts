@@ -43,7 +43,10 @@ export function parseHtmlContent(html: string): ParsedContent {
 
   while ((match = headingRe.exec(html)) !== null) {
     const level = parseInt(match[1][1]);
-    const title = match[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+    const title = match[2]
+      .replace(/<[^>]+>/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
     headings.push({ level, title, index: match.index + match[0].length });
   }
 
@@ -97,14 +100,19 @@ export function parseHtmlContent(html: string): ParsedContent {
   // Extract references - look for arxiv IDs and DOIs in reference sections
   const arxivIdRe = /(\d{4}\.\d{4,5})(v\d+)?/g;
   const doiRe = /10\.\d{4,}\/[^\s<>"]+/g;
-  const refSection = html.match(/<section[^>]*(?:id|class)="[^"]*(?:bib|ref)[^"]*"[^>]*>([\s\S]*?)<\/section>/i);
+  const refSection = html.match(
+    /<section[^>]*(?:id|class)="[^"]*(?:bib|ref)[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+  );
   const refHtml = refSection ? refSection[1] : "";
 
   if (refHtml) {
     // Extract individual reference items
     const refItems = refHtml.match(/<li[^>]*>([\s\S]*?)<\/li>/gi) || [];
     for (const item of refItems) {
-      const textItem = item.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const textItem = item
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
       const arxivMatch = item.match(arxivIdRe);
       const doiMatch = item.match(doiRe);
       references.push({
@@ -123,7 +131,8 @@ export function parsePdfText(text: string): ParsedContent {
   const lines = text.split("\n");
 
   // Heuristic section detection for PDF text
-  const sectionRe = /^(\d+\.?\s+|[A-Z]\.\s+|Abstract|Introduction|Conclusion|References|Acknowledgments)/;
+  const sectionRe =
+    /^(\d+\.?\s+|[A-Z]\.\s+|Abstract|Introduction|Conclusion|References|Acknowledgments)/;
   let currentHeading = "Abstract";
   let currentContent: string[] = [];
   let position = 0;

@@ -1,5 +1,3 @@
-import { vi } from "vitest";
-
 export function mockResponse(data: unknown, ok = true, status = 200) {
   return {
     ok,
@@ -24,8 +22,12 @@ export function captureConsole() {
   const originalLog = console.log;
   const originalError = console.error;
 
-  console.log = (...args: any[]) => { logs.push(args.map(String).join(" ")); };
-  console.error = (...args: any[]) => { errors.push(args.map(String).join(" ")); };
+  console.log = (...args: any[]) => {
+    logs.push(args.map(String).join(" "));
+  };
+  console.error = (...args: any[]) => {
+    errors.push(args.map(String).join(" "));
+  };
 
   return {
     logs,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockResponse, mockResponseError, captureConsole } from "./helpers.ts";
+import { mockResponse, captureConsole } from "./helpers.ts";
 
 vi.mock("../../src/lib/client.ts", () => ({
   createClient: vi.fn(),

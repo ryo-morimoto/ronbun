@@ -2,10 +2,10 @@
   "name": "@ronbun/cli",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "bin": {
     "ronbun": "./src/index.ts"
   },
+  "type": "module",
   "scripts": {
     "dev": "bun run src/index.ts",
     "test": "vitest run --passWithNoTests",

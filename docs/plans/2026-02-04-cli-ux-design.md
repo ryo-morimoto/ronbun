@@ -44,30 +44,30 @@ CLI は `@ronbun/arxiv` に直接依存しない。arXiv 関連の処理はす�
 
 #### Papers
 
-| Method | Path | Request | Response |
-|--------|------|---------|----------|
-| POST | `/api/papers/search` | `{ query, category?, yearFrom?, yearTo?, limit? }` | `{ papers: SearchResult[] }` |
-| GET | `/api/papers` | query: `category?, year?, status?, sortBy?, sortOrder?, cursor?, limit?` | `{ papers: PaperRow[], cursor: string \| null, hasMore: boolean }` |
-| GET | `/api/papers/:id` | - | `PaperDetail \| null` |
-| POST | `/api/papers/ingest` | `{ arxivId }` | `IngestResult` |
-| POST | `/api/papers/batch-ingest` | `{ arxivIds?, searchQuery? }` | `BatchIngestResult` |
-| GET | `/api/papers/:id/related` | query: `linkTypes?, limit?` | `{ relatedPapers: RelatedPaper[] }` |
-| GET | `/api/papers/:id/status` | - | `{ id, arxiv_id, title, status, error, created_at, ingested_at }` |
+| Method | Path                       | Request                                                                  | Response                                                           |
+| ------ | -------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| POST   | `/api/papers/search`       | `{ query, category?, yearFrom?, yearTo?, limit? }`                       | `{ papers: SearchResult[] }`                                       |
+| GET    | `/api/papers`              | query: `category?, year?, status?, sortBy?, sortOrder?, cursor?, limit?` | `{ papers: PaperRow[], cursor: string \| null, hasMore: boolean }` |
+| GET    | `/api/papers/:id`          | -                                                                        | `PaperDetail \| null`                                              |
+| POST   | `/api/papers/ingest`       | `{ arxivId }`                                                            | `IngestResult`                                                     |
+| POST   | `/api/papers/batch-ingest` | `{ arxivIds?, searchQuery? }`                                            | `BatchIngestResult`                                                |
+| GET    | `/api/papers/:id/related`  | query: `linkTypes?, limit?`                                              | `{ relatedPapers: RelatedPaper[] }`                                |
+| GET    | `/api/papers/:id/status`   | -                                                                        | `{ id, arxiv_id, title, status, error, created_at, ingested_at }`  |
 
 **`:id` パラメータ:** 全ルートで UUID と arXiv ID の両方を受け付ける。サーバー側で `getPaperById()` が両形式をハンドルする（既存動作）。CLI の `ronbun show 2401.15884` は arXiv ID をそのまま `:id` に渡す。
 
 #### Extractions
 
-| Method | Path | Request | Response |
-|--------|------|---------|----------|
-| POST | `/api/extractions/search` | `{ query, type?, limit? }` | `{ extractions: ExtractionSearchResult[] }` |
+| Method | Path                      | Request                    | Response                                    |
+| ------ | ------------------------- | -------------------------- | ------------------------------------------- |
+| POST   | `/api/extractions/search` | `{ query, type?, limit? }` | `{ extractions: ExtractionSearchResult[] }` |
 
 #### arXiv（CLI フォールバック用・新規）
 
-| Method | Path | Request | Response |
-|--------|------|---------|----------|
-| POST | `/api/arxiv/search` | `{ query, maxResults? }` | `{ results: ArxivSearchResult[] }` |
-| GET | `/api/arxiv/:arxivId/preview` | - | `{ arxivId, title, authors, abstract, bodyText }` |
+| Method | Path                          | Request                  | Response                                          |
+| ------ | ----------------------------- | ------------------------ | ------------------------------------------------- |
+| POST   | `/api/arxiv/search`           | `{ query, maxResults? }` | `{ results: ArxivSearchResult[] }`                |
+| GET    | `/api/arxiv/:arxivId/preview` | -                        | `{ arxivId, title, authors, abstract, bodyText }` |
 
 **`ArxivSearchResult` 型（新規）:**
 
@@ -83,11 +83,13 @@ type ArxivSearchResult = {
 ```
 
 **`POST /api/arxiv/search` の実装:**
+
 - 既存の `searchArxivPapers()` は ID のみ返すため、`@ronbun/arxiv` に新関数 `searchArxivPapersWithMetadata()` を追加
 - arXiv API の検索結果 XML をパースして `ArxivSearchResult[]` を返す
 - 上流 fetch には `AbortSignal.timeout(8000)` を設定。タイムアウト時は `{ error: "arXiv search timed out", code: "TIMEOUT" }` を 504 で返す
 
 **`GET /api/arxiv/:arxivId/preview` の実装:**
+
 - `fetchArxivMetadata()` でメタデータ（title, authors, abstract）を取得
 - `fetchArxivHtml()` + `parseHtmlContent()` で本文テキストを取得し、セクションを結合して `bodyText` として返す
 - レスポンスサイズ制限: bodyText は先頭 10,000 文字で切り詰め
@@ -103,19 +105,19 @@ type ArxivSearchResult = {
 { error: string, code?: string }
 ```
 
-| HTTP Status | 意味 |
-|-------------|------|
-| 400 | バリデーションエラー（Zod parse failure） |
-| 401 | Bearer token 不正または欠落 |
-| 404 | リソースが見つからない |
-| 500 | 内部エラー |
+| HTTP Status | 意味                                      |
+| ----------- | ----------------------------------------- |
+| 400         | バリデーションエラー（Zod parse failure） |
+| 401         | Bearer token 不正または欠落               |
+| 404         | リソースが見つからない                    |
+| 500         | 内部エラー                                |
 
 ### 既存エンドポイント（維持）
 
-| Method | Path | 用途 |
-|--------|------|------|
-| POST | `/mcp` | MCP JSON-RPC（AI アシスタント向け） |
-| GET | `/health` | ヘルスチェック |
+| Method | Path      | 用途                                |
+| ------ | --------- | ----------------------------------- |
+| POST   | `/mcp`    | MCP JSON-RPC（AI アシスタント向け） |
+| GET    | `/health` | ヘルスチェック                      |
 
 旧 `/status/:arxivId` エンドポイントは `/api/papers/:arxivId/status` に移行し削除。
 
@@ -168,8 +170,12 @@ export type AppType = typeof app;
 // default export → ExportedHandler（fetch, queue, scheduled を含む）
 export default {
   fetch: app.fetch,
-  queue: async (batch: MessageBatch, env: Env) => { /* ... */ },
-  scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => { /* ... */ },
+  queue: async (batch: MessageBatch, env: Env) => {
+    /* ... */
+  },
+  scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
+    /* ... */
+  },
 } satisfies ExportedHandler<Env>;
 ```
 
@@ -190,7 +196,7 @@ hono/client の RPC 型が正しく機能するために:
 - **データソース:** arXiv OAI-PMH API（`ListRecords` verb, `from`/`until` パラメータで日付指定）
   - OAI-PMH は resumption token でページネーション対応
   - 1リクエスト 100 件 × 必要ページ数
-- **想定ボリューム:** cs.* 主要カテゴリで 200-400 件/日
+- **想定ボリューム:** cs.\* 主要カテゴリで 200-400 件/日
 - **レート制限:** arXiv API は 3秒間隔を要求。OAI-PMH リクエスト間に `await sleep(3000)` を挿入
 - **処理:** 取得した ID を Queue に投入 → 既存パイプライン（metadata → content → extraction → embedding）
 - **重複チェック:** DB に既存の arxiv_id はスキップ
@@ -210,18 +216,19 @@ ronbun status <arxivId>
 `ingest` コマンドは廃止。取り込みは `search` / `show` から透過的に行う。
 
 **`search` vs `list` の使い分け:**
+
 - `search` -- 「何かを探す」。自然言語やキーワードでハイブリッド検索（FTS + ベクトル）。スコア順。DB になければ arXiv フォールバック
 - `list` -- 「一覧を見る」。フィルタ条件で絞り込み、日付やタイトルでソート。ページネーション対応。ブラウジング用途
 
 ### フラグと API パラメータの対応
 
-| CLI フラグ | API パラメータ | 備考 |
-|-----------|---------------|------|
-| `--year-from <y>` | `yearFrom` | search 用 |
-| `--year-to <y>` | `yearTo` | search 用 |
-| `--year <y>` | `year` | list 用（完全一致） |
+| CLI フラグ             | API パラメータ         | 備考                                             |
+| ---------------------- | ---------------------- | ------------------------------------------------ |
+| `--year-from <y>`      | `yearFrom`             | search 用                                        |
+| `--year-to <y>`        | `yearTo`               | search 用                                        |
+| `--year <y>`           | `year`                 | list 用（完全一致）                              |
 | `--sort <field:order>` | `sortBy` + `sortOrder` | 例: `--sort title:asc`, `--sort created_at:desc` |
-| `--cursor <c>` | `cursor` | list のページネーション |
+| `--cursor <c>`         | `cursor`               | list のページネーション                          |
 
 ### arXiv ID の処理
 
@@ -400,40 +407,41 @@ $ ronbun status 2401.15884
 
 ### API 接続エラー
 
-| 状況 | 表示 |
-|------|------|
+| 状況                    | 表示                                                                                    |
+| ----------------------- | --------------------------------------------------------------------------------------- |
 | 接続拒否 / DNS 解決失敗 | `✗ Cannot connect to ronbun API at <url>` + `Check RONBUN_API_URL environment variable` |
-| 401 Unauthorized | `✗ Authentication failed` + `Check RONBUN_API_TOKEN environment variable` |
-| タイムアウト（10秒） | `✗ Request timed out` |
-| 5xx | `✗ Server error: <status> <message>` |
+| 401 Unauthorized        | `✗ Authentication failed` + `Check RONBUN_API_TOKEN environment variable`               |
+| タイムアウト（10秒）    | `✗ Request timed out`                                                                   |
+| 5xx                     | `✗ Server error: <status> <message>`                                                    |
 
 ### arXiv フォールバックの部分失敗
 
 `show` のフォールバックは preview 取得と ingest の 2 つの独立した処理:
 
-| preview | ingest | 結果 |
-|---------|--------|------|
-| 成功 | 成功 | 正常表示 + 「Ingesting in background」 |
-| 成功 | 失敗 | 正常表示 + `⚠ Failed to queue ingestion: <error>` |
-| 失敗 | 成功 | `✗ Failed to fetch preview: <error>` + 「Ingesting in background」 |
-| 失敗 | 失敗 | `✗ Failed to fetch from arXiv: <error>` |
+| preview | ingest | 結果                                                               |
+| ------- | ------ | ------------------------------------------------------------------ |
+| 成功    | 成功   | 正常表示 + 「Ingesting in background」                             |
+| 成功    | 失敗   | 正常表示 + `⚠ Failed to queue ingestion: <error>`                  |
+| 失敗    | 成功   | `✗ Failed to fetch preview: <error>` + 「Ingesting in background」 |
+| 失敗    | 失敗   | `✗ Failed to fetch from arXiv: <error>`                            |
 
 ### 非 TTY 環境
 
 stdin が TTY でない場合（パイプ、スクリプト実行時）:
+
 - Y/n プロンプトは表示せず、arXiv フォールバックはスキップ
 - 番号選択プロンプトは表示せず、DB 結果のみ出力
 - list のページネーションプロンプトは表示せず、1ページのみ
 
 ## Tech Choices
 
-| 用途 | 選択 | 理由 |
-|------|------|------|
-| コマンドパーサー | citty | unjs 製、軽量、サブコマンド対応、型安全 |
-| API クライアント | hono/client (hc) | 型安全、apps/api の AppType から自動推論 |
-| 色付け | ANSI 直書き | 外部依存なし |
-| 対話入力 | `node:readline/promises` (`createInterface`) | Bun 互換の async API。非 TTY 検知は `process.stdin.isTTY` |
-| ランタイム | Bun | `#!/usr/bin/env bun` で直接実行。ビルドステップなし |
+| 用途             | 選択                                         | 理由                                                      |
+| ---------------- | -------------------------------------------- | --------------------------------------------------------- |
+| コマンドパーサー | citty                                        | unjs 製、軽量、サブコマンド対応、型安全                   |
+| API クライアント | hono/client (hc)                             | 型安全、apps/api の AppType から自動推論                  |
+| 色付け           | ANSI 直書き                                  | 外部依存なし                                              |
+| 対話入力         | `node:readline/promises` (`createInterface`) | Bun 互換の async API。非 TTY 検知は `process.stdin.isTTY` |
+| ランタイム       | Bun                                          | `#!/usr/bin/env bun` で直接実行。ビルドステップなし       |
 
 ### hono/client の認証設定
 
@@ -480,11 +488,11 @@ apps/cli/
 
 ## Configuration
 
-| 環境変数 | デフォルト | 用途 |
-|----------|-----------|------|
-| `RONBUN_API_URL` | `http://localhost:8787` | API エンドポイント |
-| `RONBUN_API_TOKEN` | (なし、必須) | Bearer token |
-| `NO_COLOR` | (なし) | 設定されていれば色付け無効 |
+| 環境変数           | デフォルト              | 用途                       |
+| ------------------ | ----------------------- | -------------------------- |
+| `RONBUN_API_URL`   | `http://localhost:8787` | API エンドポイント         |
+| `RONBUN_API_TOKEN` | (なし、必須)            | Bearer token               |
+| `NO_COLOR`         | (なし)                  | 設定されていれば色付け無効 |
 
 ## Changes Required in Existing Packages
 

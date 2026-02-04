@@ -12,7 +12,7 @@ export type OaiPmhRecord = {
  */
 export async function fetchNewPapersByCategory(
   categories: string[],
-  fromDate: string,  // YYYY-MM-DD
+  fromDate: string, // YYYY-MM-DD
   untilDate: string, // YYYY-MM-DD
 ): Promise<string[]> {
   const arxivIds: string[] = [];

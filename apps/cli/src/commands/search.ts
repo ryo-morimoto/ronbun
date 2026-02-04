@@ -99,7 +99,9 @@ export default defineCommand({
       console.log("");
 
       // Prompt for selection
-      const selection = await selectPrompt("Select papers to ingest (e.g., 1,3-5) or press Enter to skip");
+      const selection = await selectPrompt(
+        "Select papers to ingest (e.g., 1,3-5) or press Enter to skip",
+      );
       if (selection === "skip" || selection === "") {
         console.log("");
         return;

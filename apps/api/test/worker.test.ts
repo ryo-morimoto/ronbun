@@ -10,9 +10,7 @@ describe("D1 database operations", () => {
 
   describe("papers table", () => {
     it("queries paper by arxiv_id", async () => {
-      const result = await env.DB.prepare(
-        "SELECT * FROM papers WHERE arxiv_id = ?",
-      )
+      const result = await env.DB.prepare("SELECT * FROM papers WHERE arxiv_id = ?")
         .bind("2401.15884")
         .first();
       expect(result).not.toBeNull();
@@ -21,9 +19,7 @@ describe("D1 database operations", () => {
     });
 
     it("queries paper by id", async () => {
-      const result = await env.DB.prepare(
-        "SELECT * FROM papers WHERE id = ?",
-      )
+      const result = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
         .bind("paper-1")
         .first();
       expect(result).not.toBeNull();
@@ -31,18 +27,14 @@ describe("D1 database operations", () => {
     });
 
     it("filters papers by status", async () => {
-      const result = await env.DB.prepare(
-        "SELECT * FROM papers WHERE status = ?",
-      )
+      const result = await env.DB.prepare("SELECT * FROM papers WHERE status = ?")
         .bind("ready")
         .all();
       expect(result.results.length).toBe(2);
     });
 
     it("returns null for non-existent paper", async () => {
-      const result = await env.DB.prepare(
-        "SELECT * FROM papers WHERE arxiv_id = ?",
-      )
+      const result = await env.DB.prepare("SELECT * FROM papers WHERE arxiv_id = ?")
         .bind("9999.99999")
         .first();
       expect(result).toBeNull();
@@ -60,9 +52,7 @@ describe("D1 database operations", () => {
 
     it("enforces valid status", async () => {
       await expect(
-        env.DB.prepare(
-          "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, ?, ?)",
-        )
+        env.DB.prepare("INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, ?, ?)")
           .bind("paper-bad", "9999.00001", "invalid_status", "2024-01-01T00:00:00Z")
           .run(),
       ).rejects.toThrow();
@@ -131,9 +121,7 @@ describe("D1 database operations", () => {
 
   describe("citations table", () => {
     it("queries outgoing citations", async () => {
-      const result = await env.DB.prepare(
-        "SELECT * FROM citations WHERE source_paper_id = ?",
-      )
+      const result = await env.DB.prepare("SELECT * FROM citations WHERE source_paper_id = ?")
         .bind("paper-1")
         .all();
       expect(result.results.length).toBe(1);
@@ -181,9 +169,7 @@ describe("D1 database operations", () => {
 
   describe("paper get query (composite)", () => {
     it("fetches full paper details with joins", async () => {
-      const paper = await env.DB.prepare(
-        "SELECT * FROM papers WHERE id = ?",
-      )
+      const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
         .bind("paper-1")
         .first();
       expect(paper).not.toBeNull();
@@ -195,16 +181,12 @@ describe("D1 database operations", () => {
         .all();
       expect(sections.results.length).toBe(2);
 
-      const extractions = await env.DB.prepare(
-        "SELECT * FROM extractions WHERE paper_id = ?",
-      )
+      const extractions = await env.DB.prepare("SELECT * FROM extractions WHERE paper_id = ?")
         .bind("paper-1")
         .all();
       expect(extractions.results.length).toBe(2);
 
-      const citations = await env.DB.prepare(
-        "SELECT * FROM citations WHERE source_paper_id = ?",
-      )
+      const citations = await env.DB.prepare("SELECT * FROM citations WHERE source_paper_id = ?")
         .bind("paper-1")
         .all();
       expect(citations.results.length).toBe(1);
@@ -241,9 +223,7 @@ describe("D1 database operations", () => {
         .bind("New Paper Title", "paper-new")
         .run();
 
-      paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
-        .bind("paper-new")
-        .first();
+      paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind("paper-new").first();
       expect(paper!.status).toBe("metadata");
       expect(paper!.title).toBe("New Paper Title");
     });

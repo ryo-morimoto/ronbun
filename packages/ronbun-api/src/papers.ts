@@ -27,10 +27,7 @@ export type PaperDetail = {
   }>;
 };
 
-export async function getPaper(
-  ctx: RonbunContext,
-  input: unknown,
-): Promise<PaperDetail | null> {
+export async function getPaper(ctx: RonbunContext, input: unknown): Promise<PaperDetail | null> {
   const validated = getPaperInput.parse(input);
   const paperResult = await getPaperById(ctx.db, validated.paperId);
 
@@ -57,10 +54,7 @@ export type PaperListResult = {
   hasMore: boolean;
 };
 
-export async function listPapers(
-  ctx: RonbunContext,
-  input: unknown,
-): Promise<PaperListResult> {
+export async function listPapers(ctx: RonbunContext, input: unknown): Promise<PaperListResult> {
   const validated = listPapersInput.parse(input);
   const { category, year, status, sortBy, sortOrder, cursor, limit } = validated;
 
@@ -80,9 +74,7 @@ export async function listPapers(
     categories: p.categories ? JSON.parse(p.categories) : [],
   }));
 
-  const nextCursor = result.papers.length > 0
-    ? result.papers[result.papers.length - 1].id
-    : null;
+  const nextCursor = result.papers.length > 0 ? result.papers[result.papers.length - 1].id : null;
 
   return {
     papers: parsedPapers,
@@ -112,7 +104,13 @@ export async function findRelated(
   }
 
   const actualPaperId = paperExists.id;
-  const types = linkTypes || ["citation", "cited_by", "shared_method", "shared_dataset", "shared_author"];
+  const types = linkTypes || [
+    "citation",
+    "cited_by",
+    "shared_method",
+    "shared_dataset",
+    "shared_author",
+  ];
 
   const relatedPapers: RelatedPaper[] = [];
   const seen = new Set<string>();

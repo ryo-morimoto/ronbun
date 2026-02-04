@@ -112,6 +112,7 @@ ronbun/
 ## Task 1: Root Monorepo Scaffolding
 
 **Files:**
+
 - Create: `package.json` (overwrite root)
 - Create: `turbo.json`
 - Create: `tsconfig.base.json`
@@ -214,6 +215,7 @@ git commit -m "chore: initialize turborepo monorepo scaffolding"
 Extract all shared TypeScript types from `src/types.ts`. Remove the `Env` type (that stays in each app). Remove Cloudflare-specific types from the shared package.
 
 **Files:**
+
 - Create: `packages/ronbun-types/src/index.ts`
 - Create: `packages/ronbun-types/package.json`
 - Create: `packages/ronbun-types/tsconfig.json`
@@ -285,7 +287,14 @@ export type SectionRow = {
   created_at: string;
 };
 
-export type ExtractionType = "method" | "dataset" | "baseline" | "metric" | "result" | "contribution" | "limitation";
+export type ExtractionType =
+  | "method"
+  | "dataset"
+  | "baseline"
+  | "metric"
+  | "result"
+  | "contribution"
+  | "limitation";
 
 export type ExtractionRow = {
   id: string;
@@ -344,6 +353,7 @@ git commit -m "feat: add @ronbun/types package with shared domain types"
 Move Zod schemas from `src/schemas.ts`. Depends on `@ronbun/types`.
 
 **Files:**
+
 - Create: `packages/ronbun-schemas/src/index.ts`
 - Create: `packages/ronbun-schemas/test/schemas.test.ts`
 - Create: `packages/ronbun-schemas/vitest.config.ts`
@@ -417,12 +427,14 @@ export const ingestPaperInput = z.object({
   arxivId: arxivIdSchema,
 });
 
-export const batchIngestInput = z.object({
-  arxivIds: z.array(arxivIdSchema).min(1).max(50).optional(),
-  searchQuery: z.string().min(1).max(200).optional(),
-}).refine((data) => data.arxivIds || data.searchQuery, {
-  message: "Either arxivIds or searchQuery must be provided",
-});
+export const batchIngestInput = z
+  .object({
+    arxivIds: z.array(arxivIdSchema).min(1).max(50).optional(),
+    searchQuery: z.string().min(1).max(200).optional(),
+  })
+  .refine((data) => data.arxivIds || data.searchQuery, {
+    message: "Either arxivIds or searchQuery must be provided",
+  });
 
 export const searchPapersInput = z.object({
   query: z.string().min(1).max(500),
@@ -448,13 +460,17 @@ export const listPapersInput = z.object({
 
 export const findRelatedInput = z.object({
   paperId: z.string().min(1),
-  linkTypes: z.array(z.enum(["citation", "cited_by", "shared_method", "shared_dataset", "shared_author"])).optional(),
+  linkTypes: z
+    .array(z.enum(["citation", "cited_by", "shared_method", "shared_dataset", "shared_author"]))
+    .optional(),
   limit: z.number().int().min(1).max(50).default(10),
 });
 
 export const searchExtractionsInput = z.object({
   query: z.string().min(1).max(500),
-  type: z.enum(["method", "dataset", "baseline", "metric", "result", "contribution", "limitation"]).optional(),
+  type: z
+    .enum(["method", "dataset", "baseline", "metric", "result", "contribution", "limitation"])
+    .optional(),
   limit: z.number().int().min(1).max(50).default(20),
 });
 
@@ -506,6 +522,7 @@ git commit -m "feat: add @ronbun/schemas package with Zod validation schemas"
 Move arXiv API integration and parsers from `src/lib/arxiv.ts`. Pure HTTP + string parsing, no Cloudflare dependencies. Also includes `generateId()` from `src/lib/id.ts`.
 
 **Files:**
+
 - Create: `packages/ronbun-arxiv/src/api.ts` (fetchArxivMetadata, searchArxivPapers)
 - Create: `packages/ronbun-arxiv/src/parser.ts` (parseHtmlContent, parsePdfText, fetchArxivHtml, fetchArxivPdf)
 - Create: `packages/ronbun-arxiv/src/id.ts` (generateId)
@@ -645,12 +662,7 @@ export function generateId(): string {
 export { fetchArxivMetadata, searchArxivPapers } from "./api.ts";
 export type { ArxivMetadata } from "./api.ts";
 
-export {
-  fetchArxivHtml,
-  fetchArxivPdf,
-  parseHtmlContent,
-  parsePdfText,
-} from "./parser.ts";
+export { fetchArxivHtml, fetchArxivPdf, parseHtmlContent, parsePdfText } from "./parser.ts";
 export type { ParsedSection, ParsedReference, ParsedContent } from "./parser.ts";
 
 export { generateId } from "./id.ts";
@@ -686,6 +698,7 @@ git commit -m "feat: add @ronbun/arxiv package with arXiv API and parser"
 Extract D1 database operations. All functions take `db: D1Database` as first argument (DI pattern). Use `@cloudflare/workers-types` for D1 type.
 
 **Files:**
+
 - Create: `packages/ronbun-database/src/papers.ts`
 - Create: `packages/ronbun-database/src/sections.ts`
 - Create: `packages/ronbun-database/src/extractions.ts`
@@ -752,11 +765,7 @@ export async function findPaperByArxivId(
     .first<Pick<PaperRow, "id" | "arxiv_id" | "status">>();
 }
 
-export async function insertPaper(
-  db: D1Database,
-  id: string,
-  arxivId: string,
-): Promise<void> {
+export async function insertPaper(db: D1Database, id: string, arxivId: string): Promise<void> {
   const now = new Date().toISOString();
   await db
     .prepare("INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)")
@@ -800,16 +809,10 @@ export async function updatePaperStatus(
   paperId: string,
   status: PaperStatus,
 ): Promise<void> {
-  await db
-    .prepare("UPDATE papers SET status = ? WHERE id = ?")
-    .bind(status, paperId)
-    .run();
+  await db.prepare("UPDATE papers SET status = ? WHERE id = ?").bind(status, paperId).run();
 }
 
-export async function markPaperReady(
-  db: D1Database,
-  paperId: string,
-): Promise<void> {
+export async function markPaperReady(db: D1Database, paperId: string): Promise<void> {
   await db
     .prepare("UPDATE papers SET status = 'ready', ingested_at = ? WHERE id = ?")
     .bind(new Date().toISOString(), paperId)
@@ -827,20 +830,14 @@ export async function markPaperFailed(
     .run();
 }
 
-export async function getPaperById(
-  db: D1Database,
-  id: string,
-): Promise<PaperRow | null> {
+export async function getPaperById(db: D1Database, id: string): Promise<PaperRow | null> {
   return db
     .prepare("SELECT * FROM papers WHERE id = ? OR arxiv_id = ?")
     .bind(id, id)
     .first<PaperRow>();
 }
 
-export async function getPaperArxivId(
-  db: D1Database,
-  paperId: string,
-): Promise<string | null> {
+export async function getPaperArxivId(db: D1Database, paperId: string): Promise<string | null> {
   const row = await db
     .prepare("SELECT arxiv_id FROM papers WHERE id = ?")
     .bind(paperId)
@@ -893,7 +890,10 @@ export async function listPapers(
   const query = `SELECT * FROM papers ${whereClause} ORDER BY ${opts.sortBy} ${opts.sortOrder}, id ${opts.sortOrder} LIMIT ?`;
   params.push(opts.limit + 1);
 
-  const result = await db.prepare(query).bind(...params).all<PaperRow>();
+  const result = await db
+    .prepare(query)
+    .bind(...params)
+    .all<PaperRow>();
   const papers = result.results || [];
   const hasMore = papers.length > opts.limit;
   if (hasMore) papers.pop();
@@ -955,10 +955,7 @@ export async function searchSectionsFts(
   return result.results as any;
 }
 
-export async function fetchPapersByIds(
-  db: D1Database,
-  ids: string[],
-): Promise<PaperRow[]> {
+export async function fetchPapersByIds(db: D1Database, ids: string[]): Promise<PaperRow[]> {
   if (ids.length === 0) return [];
   const placeholders = ids.map(() => "?").join(",");
   const result = await db
@@ -974,6 +971,7 @@ export async function fetchPapersByIds(
 Each file contains the relevant D1 queries extracted from `src/tools/papers.ts` and `src/queue/consumer.ts`. All take `db: D1Database` as first param.
 
 Follow the same DI pattern. Extract:
+
 - `sections.ts`: `getSectionsByPaperId`, `insertSection`, `getSectionsForExtraction`
 - `extractions.ts`: `getExtractionsByPaperId`, `insertExtraction`, `searchExtractionsFts`
 - `citations.ts`: `getCitationsBySource`, `getCitedBy`, `insertCitation`
@@ -1010,6 +1008,7 @@ git commit -m "feat: add @ronbun/database package with D1 operations"
 R2 storage operations. Thin wrapper, receives `R2Bucket` via DI.
 
 **Files:**
+
 - Create: `packages/ronbun-storage/src/index.ts`
 - Create: `packages/ronbun-storage/package.json`
 - Create: `packages/ronbun-storage/tsconfig.json`
@@ -1070,18 +1069,12 @@ export async function storePdf(
   await storage.put(`pdf/${arxivId}.pdf`, content);
 }
 
-export async function getHtml(
-  storage: R2Bucket,
-  arxivId: string,
-): Promise<string | null> {
+export async function getHtml(storage: R2Bucket, arxivId: string): Promise<string | null> {
   const obj = await storage.get(`html/${arxivId}.html`);
   return obj ? obj.text() : null;
 }
 
-export async function getPdf(
-  storage: R2Bucket,
-  arxivId: string,
-): Promise<ArrayBuffer | null> {
+export async function getPdf(storage: R2Bucket, arxivId: string): Promise<ArrayBuffer | null> {
   const obj = await storage.get(`pdf/${arxivId}.pdf`);
   return obj ? obj.arrayBuffer() : null;
 }
@@ -1106,6 +1099,7 @@ git commit -m "feat: add @ronbun/storage package with R2 operations"
 Vectorize operations. Receives `VectorizeIndex` and `Ai` via DI.
 
 **Files:**
+
 - Create: `packages/ronbun-vector/src/index.ts`
 - Create: `packages/ronbun-vector/package.json`
 - Create: `packages/ronbun-vector/tsconfig.json`
@@ -1150,10 +1144,7 @@ Vectorize operations. Receives `VectorizeIndex` and `Ai` via DI.
 **Step 3: Create src/index.ts**
 
 ```typescript
-export async function generateEmbedding(
-  ai: Ai,
-  text: string,
-): Promise<number[]> {
+export async function generateEmbedding(ai: Ai, text: string): Promise<number[]> {
   const response = await ai.run("@cf/baai/bge-large-en-v1.5", {
     text: [text],
   });
@@ -1236,6 +1227,7 @@ git commit -m "feat: add @ronbun/vector package with Vectorize operations"
 Business logic / use-case layer. Orchestrates database, storage, vector, arxiv packages. Returns **plain data** (not MCP-formatted responses). Defines a `RonbunContext` type for DI.
 
 **Files:**
+
 - Create: `packages/ronbun-api/src/context.ts`
 - Create: `packages/ronbun-api/src/ingest.ts`
 - Create: `packages/ronbun-api/src/search.ts`
@@ -1496,6 +1488,7 @@ git commit -m "feat: add @ronbun/api package with business logic layer"
 Move existing Cloudflare Worker into `apps/mcp`. Wire up to use `@ronbun/api`. MCP tool handlers become thin wrappers that call API functions and format responses.
 
 **Files:**
+
 - Create: `apps/mcp/src/index.ts` (rewrite to use @ronbun/api)
 - Create: `apps/mcp/src/env.ts` (Env type with bindings)
 - Move: `wrangler.toml` -> `apps/mcp/wrangler.toml` (update migrations_dir)
@@ -1594,7 +1587,11 @@ function createMcpServer(env: Env): McpServer {
   const ctx = createContext(env);
   const server = new McpServer({ name: "ronbun", version: "0.1.0" });
 
-  server.registerTool("ingest_paper", { /* same schema */ },
+  server.registerTool(
+    "ingest_paper",
+    {
+      /* same schema */
+    },
     async ({ arxivId }) => {
       try {
         return mcpResult(await ingestPaper(ctx, { arxivId }));
@@ -1711,10 +1708,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
-  plugins: [
-    cloudflare({ viteEnvironment: { name: "ssr" } }),
-    tanstackStart(),
-  ],
+  plugins: [cloudflare({ viteEnvironment: { name: "ssr" } }), tanstackStart()],
 });
 ```
 
@@ -1731,9 +1725,9 @@ export default defineConfig({
     {
       "binding": "DB",
       "database_name": "arxiv-db",
-      "database_id": "placeholder-replace-after-creation"
-    }
-  ]
+      "database_id": "placeholder-replace-after-creation",
+    },
+  ],
 }
 ```
 
@@ -1754,7 +1748,13 @@ const doSearch = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     // Access Cloudflare bindings via platform env
     const env = (globalThis as any).__cf_env__;
-    const ctx = { db: env.DB, storage: env.STORAGE, vectorIndex: env.VECTOR_INDEX, ai: env.AI, queue: env.INGEST_QUEUE };
+    const ctx = {
+      db: env.DB,
+      storage: env.STORAGE,
+      vectorIndex: env.VECTOR_INDEX,
+      ai: env.AI,
+      queue: env.INGEST_QUEUE,
+    };
     return searchPapers(ctx, { query: data.query });
   });
 ```
@@ -1780,6 +1780,7 @@ git commit -m "feat: add apps/web with TanStack Start on Cloudflare Pages"
 CLI tool for terminal-based paper operations. Uses `@ronbun/api` functions. Connects to the MCP server's REST API (or directly to Cloudflare D1 via REST API for local operations).
 
 **Files:**
+
 - Create: `apps/cli/src/index.ts`
 - Create: `apps/cli/package.json`
 - Create: `apps/cli/tsconfig.json`
@@ -1853,21 +1854,30 @@ async function callMcp(toolName: string, params: Record<string, unknown>) {
 switch (command) {
   case "search": {
     const query = args.join(" ");
-    if (!query) { console.error("Usage: ronbun search <query>"); process.exit(1); }
+    if (!query) {
+      console.error("Usage: ronbun search <query>");
+      process.exit(1);
+    }
     const result = await callMcp("search_papers", { query });
     console.log(JSON.stringify(result, null, 2));
     break;
   }
   case "ingest": {
     const arxivId = args[0];
-    if (!arxivId) { console.error("Usage: ronbun ingest <arxivId>"); process.exit(1); }
+    if (!arxivId) {
+      console.error("Usage: ronbun ingest <arxivId>");
+      process.exit(1);
+    }
     const result = await callMcp("ingest_paper", { arxivId });
     console.log(JSON.stringify(result, null, 2));
     break;
   }
   case "show": {
     const paperId = args[0];
-    if (!paperId) { console.error("Usage: ronbun show <paperId|arxivId>"); process.exit(1); }
+    if (!paperId) {
+      console.error("Usage: ronbun show <paperId|arxivId>");
+      process.exit(1);
+    }
     const result = await callMcp("get_paper", { paperId });
     console.log(JSON.stringify(result, null, 2));
     break;
@@ -1879,7 +1889,10 @@ switch (command) {
   }
   case "related": {
     const paperId = args[0];
-    if (!paperId) { console.error("Usage: ronbun related <paperId>"); process.exit(1); }
+    if (!paperId) {
+      console.error("Usage: ronbun related <paperId>");
+      process.exit(1);
+    }
     const result = await callMcp("find_related", { paperId });
     console.log(JSON.stringify(result, null, 2));
     break;

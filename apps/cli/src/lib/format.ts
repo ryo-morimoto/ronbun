@@ -14,7 +14,9 @@ type PaperRow = {
 export function formatPaperRow(p: PaperRow): string {
   const id = p.arxivId || p.arxiv_id || "";
   const title = truncate(p.title || "(untitled)", titleWidth());
-  const cats = Array.isArray(p.categories) ? p.categories[0] || "" : (p.categories || "").split(",")[0] || "";
+  const cats = Array.isArray(p.categories)
+    ? p.categories[0] || ""
+    : (p.categories || "").split(",")[0] || "";
   const year = (p.publishedAt || p.published_at || "").slice(0, 4);
   return `  ${dim(id)}  ${bold(title)}  ${dim(cats)}  ${dim(year)}`;
 }
@@ -49,13 +51,21 @@ export function formatDetail(paper: any): string {
 
   if (paper.sections && paper.extractions && paper.citations) {
     lines.push("");
-    lines.push(`  Sections: ${paper.sections.length} · Extractions: ${paper.extractions.length} · Citations: ${paper.citations.length}`);
+    lines.push(
+      `  Sections: ${paper.sections.length} · Extractions: ${paper.extractions.length} · Citations: ${paper.citations.length}`,
+    );
   }
 
   return lines.join("\n");
 }
 
-export function formatPreview(data: { arxivId: string; title: string; authors: string[]; abstract: string; bodyText: string | null }): string {
+export function formatPreview(data: {
+  arxivId: string;
+  title: string;
+  authors: string[];
+  abstract: string;
+  bodyText: string | null;
+}): string {
   const lines: string[] = [];
   lines.push("");
   lines.push(`  ${bold(data.title)}  ${dim("[arXiv · preview]")}`);

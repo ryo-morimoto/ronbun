@@ -11,10 +11,7 @@ const arxiv = new Hono<{ Bindings: Env }>()
   .post("/search", async (c) => {
     try {
       const body = await c.req.json<{ query: string; maxResults?: number }>();
-      const results = await searchArxivPapersWithMetadata(
-        body.query,
-        body.maxResults,
-      );
+      const results = await searchArxivPapersWithMetadata(body.query, body.maxResults);
       return c.json({ results });
     } catch (error) {
       if (

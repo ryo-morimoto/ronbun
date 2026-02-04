@@ -59,9 +59,7 @@ describe("semanticSearch", () => {
     const ai = createMockAi();
     const vectorIndex = {
       query: vi.fn().mockResolvedValue({
-        matches: [
-          { id: "sec-1", score: 0.9, metadata: {} },
-        ],
+        matches: [{ id: "sec-1", score: 0.9, metadata: {} }],
       }),
     } as unknown as VectorizeIndex;
 
@@ -97,7 +95,8 @@ describe("upsertSectionEmbeddings", () => {
 
   it("skips sections that fail embedding", async () => {
     const ai = {
-      run: vi.fn()
+      run: vi
+        .fn()
         .mockResolvedValueOnce({ data: [[0.1, 0.2]] })
         .mockRejectedValueOnce(new Error("embedding failed"))
         .mockResolvedValueOnce({ data: [[0.3, 0.4]] }),
@@ -125,9 +124,7 @@ describe("upsertSectionEmbeddings", () => {
     } as unknown as Ai;
     const vectorIndex = createMockVectorIndex();
 
-    const sections = [
-      { id: "sec-1", heading: "Intro", content: "Intro" },
-    ];
+    const sections = [{ id: "sec-1", heading: "Intro", content: "Intro" }];
 
     const count = await upsertSectionEmbeddings(vectorIndex, ai, "paper-1", sections);
     expect(count).toBe(0);

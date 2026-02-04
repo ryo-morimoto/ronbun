@@ -13,14 +13,11 @@ function createContext(env: Env): RonbunContext {
   };
 }
 
-const extractions = new Hono<{ Bindings: Env }>().post(
-  "/search",
-  async (c) => {
-    const body = await c.req.json();
-    const ctx = createContext(c.env);
-    const result = await searchExtractions(ctx, body);
-    return c.json(result);
-  },
-);
+const extractions = new Hono<{ Bindings: Env }>().post("/search", async (c) => {
+  const body = await c.req.json();
+  const ctx = createContext(c.env);
+  const result = await searchExtractions(ctx, body);
+  return c.json(result);
+});
 
 export default extractions;

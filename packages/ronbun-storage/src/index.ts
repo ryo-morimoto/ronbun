@@ -14,18 +14,12 @@ export async function storePdf(
   await storage.put(`pdf/${arxivId}.pdf`, content);
 }
 
-export async function getHtml(
-  storage: R2Bucket,
-  arxivId: string,
-): Promise<string | null> {
+export async function getHtml(storage: R2Bucket, arxivId: string): Promise<string | null> {
   const obj = await storage.get(`html/${arxivId}.html`);
   return obj ? obj.text() : null;
 }
 
-export async function getPdf(
-  storage: R2Bucket,
-  arxivId: string,
-): Promise<ArrayBuffer | null> {
+export async function getPdf(storage: R2Bucket, arxivId: string): Promise<ArrayBuffer | null> {
   const obj = await storage.get(`pdf/${arxivId}.pdf`);
   return obj ? obj.arrayBuffer() : null;
 }

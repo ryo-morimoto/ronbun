@@ -70,9 +70,7 @@ describe("show command", () => {
   });
 
   it("displays ready paper details", async () => {
-    mockClient.api.papers[":id"].$get.mockResolvedValue(
-      mockResponse(readyPaperData),
-    );
+    mockClient.api.papers[":id"].$get.mockResolvedValue(mockResponse(readyPaperData));
 
     const showCommand = (await import("../../src/commands/show.ts")).default;
     await showCommand.run!({ args: { id: "2401.15884" } } as any);
@@ -88,9 +86,7 @@ describe("show command", () => {
       citations: [],
       citedBy: [],
     };
-    mockClient.api.papers[":id"].$get.mockResolvedValue(
-      mockResponse(failedData),
-    );
+    mockClient.api.papers[":id"].$get.mockResolvedValue(mockResponse(failedData));
 
     const showCommand = (await import("../../src/commands/show.ts")).default;
     await showCommand.run!({ args: { id: "2401.15884" } } as any);
@@ -100,9 +96,7 @@ describe("show command", () => {
   });
 
   it("handles 404 for arXiv ID by offering fetch", async () => {
-    mockClient.api.papers[":id"].$get.mockResolvedValue(
-      mockResponseError(404),
-    );
+    mockClient.api.papers[":id"].$get.mockResolvedValue(mockResponseError(404));
 
     const showCommand = (await import("../../src/commands/show.ts")).default;
     await showCommand.run!({ args: { id: "2401.15884" } } as any);

@@ -75,15 +75,15 @@ cd apps/cli && bun run dev       # Run CLI locally
 
 ## MCP Tools
 
-| Tool | Description |
-|------|-------------|
-| `ingest_paper` | Ingest a single arXiv paper by ID |
-| `batch_ingest` | Ingest multiple papers by IDs or search query |
-| `search_papers` | Hybrid semantic + keyword search |
-| `search_extractions` | Search extracted knowledge across papers |
-| `get_paper` | Get full paper details with sections, extractions, citations |
-| `list_papers` | List papers with filtering and pagination |
-| `find_related` | Find related papers via citations, shared methods/datasets/authors |
+| Tool                 | Description                                                        |
+| -------------------- | ------------------------------------------------------------------ |
+| `ingest_paper`       | Ingest a single arXiv paper by ID                                  |
+| `batch_ingest`       | Ingest multiple papers by IDs or search query                      |
+| `search_papers`      | Hybrid semantic + keyword search                                   |
+| `search_extractions` | Search extracted knowledge across papers                           |
+| `get_paper`          | Get full paper details with sections, extractions, citations       |
+| `list_papers`        | List papers with filtering and pagination                          |
+| `find_related`       | Find related papers via citations, shared methods/datasets/authors |
 
 ## CLI Commands
 

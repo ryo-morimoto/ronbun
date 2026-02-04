@@ -53,6 +53,7 @@ bun run db:migrate:local   # Apply migrations locally
 ```
 
 Per-app commands:
+
 ```bash
 cd apps/api && bun run dev       # API server dev
 cd apps/api && bun run test      # API integration tests

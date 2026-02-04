@@ -69,10 +69,7 @@ function createMcpServer(env: Env): McpServer {
       description:
         "Ingest multiple papers at once. Provide either a list of arxiv IDs or a search query.",
       inputSchema: {
-        arxivIds: z
-          .array(z.string())
-          .optional()
-          .describe("List of arxiv IDs to ingest"),
+        arxivIds: z.array(z.string()).optional().describe("List of arxiv IDs to ingest"),
         searchQuery: z
           .string()
           .optional()
@@ -92,16 +89,10 @@ function createMcpServer(env: Env): McpServer {
     "search_papers",
     {
       title: "Search Papers",
-      description:
-        "Search ingested papers using hybrid semantic + keyword search.",
+      description: "Search ingested papers using hybrid semantic + keyword search.",
       inputSchema: {
-        query: z
-          .string()
-          .describe("Search query (keywords or natural language)"),
-        category: z
-          .string()
-          .optional()
-          .describe("Filter by arxiv category (e.g. cs.CL)"),
+        query: z.string().describe("Search query (keywords or natural language)"),
+        category: z.string().optional().describe("Filter by arxiv category (e.g. cs.CL)"),
         yearFrom: z.number().optional().describe("Filter from this year"),
         yearTo: z.number().optional().describe("Filter up to this year"),
         limit: z.number().optional().describe("Max results (default 10)"),
@@ -144,20 +135,10 @@ function createMcpServer(env: Env): McpServer {
         category: z.string().optional().describe("Filter by category"),
         year: z.number().optional().describe("Filter by year"),
         status: z
-          .enum([
-            "queued",
-            "metadata",
-            "parsed",
-            "extracted",
-            "ready",
-            "failed",
-          ])
+          .enum(["queued", "metadata", "parsed", "extracted", "ready", "failed"])
           .optional()
           .describe("Filter by status"),
-        sortBy: z
-          .enum(["published_at", "created_at", "title"])
-          .optional()
-          .describe("Sort field"),
+        sortBy: z.enum(["published_at", "created_at", "title"]).optional().describe("Sort field"),
         sortOrder: z.enum(["asc", "desc"]).optional().describe("Sort order"),
         cursor: z.string().optional().describe("Pagination cursor"),
         limit: z.number().optional().describe("Max results"),
@@ -176,19 +157,12 @@ function createMcpServer(env: Env): McpServer {
     "find_related",
     {
       title: "Find Related Papers",
-      description:
-        "Find related papers via citations, shared methods, datasets, or authors.",
+      description: "Find related papers via citations, shared methods, datasets, or authors.",
       inputSchema: {
         paperId: z.string().describe("Paper ID or arxiv ID"),
         linkTypes: z
           .array(
-            z.enum([
-              "citation",
-              "cited_by",
-              "shared_method",
-              "shared_dataset",
-              "shared_author",
-            ]),
+            z.enum(["citation", "cited_by", "shared_method", "shared_dataset", "shared_author"]),
           )
           .optional()
           .describe("Filter by relationship types"),
@@ -208,20 +182,11 @@ function createMcpServer(env: Env): McpServer {
     "search_extractions",
     {
       title: "Search Extractions",
-      description:
-        "Search extracted structured knowledge across all papers.",
+      description: "Search extracted structured knowledge across all papers.",
       inputSchema: {
         query: z.string().describe("Search query"),
         type: z
-          .enum([
-            "method",
-            "dataset",
-            "baseline",
-            "metric",
-            "result",
-            "contribution",
-            "limitation",
-          ])
+          .enum(["method", "dataset", "baseline", "metric", "result", "contribution", "limitation"])
           .optional()
           .describe("Filter by type"),
         limit: z.number().optional().describe("Max results"),

@@ -26,10 +26,7 @@ export const app = new Hono<{ Bindings: Env }>()
       return err.getResponse();
     }
     if (err instanceof ZodError) {
-      return c.json(
-        { error: err.errors[0].message, code: "VALIDATION_ERROR" },
-        400,
-      );
+      return c.json({ error: err.errors[0].message, code: "VALIDATION_ERROR" }, 400);
     }
     console.error("Unhandled error:", err);
     return c.json({ error: "Internal server error" }, 500);

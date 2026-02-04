@@ -58,7 +58,9 @@ export default defineCommand({
         if (data.paper?.status !== "ready") {
           console.log(formatDetail(data));
           console.log("");
-          console.log(`  ${dim("Ingestion in progress. Check status with 'ronbun status " + id + "'.")}`);
+          console.log(
+            `  ${dim("Ingestion in progress. Check status with 'ronbun status " + id + "'.")}`,
+          );
           console.log("");
           return;
         }
@@ -92,7 +94,9 @@ export default defineCommand({
 
         console.log(formatPreview(preview));
         console.log("");
-        console.log(`  ${dim("Ingesting in background. Check status with 'ronbun status " + id + "'.")}`);
+        console.log(
+          `  ${dim("Ingesting in background. Check status with 'ronbun status " + id + "'.")}`,
+        );
         console.log("");
         return;
       }

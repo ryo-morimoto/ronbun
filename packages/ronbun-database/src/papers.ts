@@ -10,11 +10,7 @@ export async function findPaperByArxivId(
     .first<Pick<PaperRow, "id" | "arxiv_id" | "status">>();
 }
 
-export async function insertPaper(
-  db: D1Database,
-  id: string,
-  arxivId: string,
-): Promise<void> {
+export async function insertPaper(db: D1Database, id: string, arxivId: string): Promise<void> {
   const now = new Date().toISOString();
   await db
     .prepare("INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)")
@@ -58,16 +54,10 @@ export async function updatePaperStatus(
   paperId: string,
   status: PaperStatus,
 ): Promise<void> {
-  await db
-    .prepare("UPDATE papers SET status = ? WHERE id = ?")
-    .bind(status, paperId)
-    .run();
+  await db.prepare("UPDATE papers SET status = ? WHERE id = ?").bind(status, paperId).run();
 }
 
-export async function markPaperReady(
-  db: D1Database,
-  paperId: string,
-): Promise<void> {
+export async function markPaperReady(db: D1Database, paperId: string): Promise<void> {
   await db
     .prepare("UPDATE papers SET status = 'ready', ingested_at = ? WHERE id = ?")
     .bind(new Date().toISOString(), paperId)
@@ -85,20 +75,14 @@ export async function markPaperFailed(
     .run();
 }
 
-export async function getPaperById(
-  db: D1Database,
-  id: string,
-): Promise<PaperRow | null> {
+export async function getPaperById(db: D1Database, id: string): Promise<PaperRow | null> {
   return db
     .prepare("SELECT * FROM papers WHERE id = ? OR arxiv_id = ?")
     .bind(id, id)
     .first<PaperRow>();
 }
 
-export async function getPaperArxivId(
-  db: D1Database,
-  paperId: string,
-): Promise<string | null> {
+export async function getPaperArxivId(db: D1Database, paperId: string): Promise<string | null> {
   const row = await db
     .prepare("SELECT arxiv_id FROM papers WHERE id = ?")
     .bind(paperId)
@@ -151,7 +135,10 @@ export async function listPapers(
   const query = `SELECT * FROM papers ${whereClause} ORDER BY ${opts.sortBy} ${opts.sortOrder}, id ${opts.sortOrder} LIMIT ?`;
   params.push(opts.limit + 1);
 
-  const result = await db.prepare(query).bind(...params).all<PaperRow>();
+  const result = await db
+    .prepare(query)
+    .bind(...params)
+    .all<PaperRow>();
   const papers = result.results || [];
   const hasMore = papers.length > opts.limit;
   if (hasMore) papers.pop();
@@ -213,10 +200,7 @@ export async function searchSectionsFts(
   return result.results as any;
 }
 
-export async function fetchPapersByIds(
-  db: D1Database,
-  ids: string[],
-): Promise<PaperRow[]> {
+export async function fetchPapersByIds(db: D1Database, ids: string[]): Promise<PaperRow[]> {
   if (ids.length === 0) return [];
   const placeholders = ids.map(() => "?").join(",");
   const result = await db
