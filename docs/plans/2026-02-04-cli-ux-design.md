@@ -85,6 +85,7 @@ type ArxivSearchResult = {
 **`POST /api/arxiv/search` の実装:**
 - 既存の `searchArxivPapers()` は ID のみ返すため、`@ronbun/arxiv` に新関数 `searchArxivPapersWithMetadata()` を追加
 - arXiv API の検索結果 XML をパースして `ArxivSearchResult[]` を返す
+- 上流 fetch には `AbortSignal.timeout(8000)` を設定。タイムアウト時は `{ error: "arXiv search timed out", code: "TIMEOUT" }` を 504 で返す
 
 **`GET /api/arxiv/:arxivId/preview` の実装:**
 - `fetchArxivMetadata()` でメタデータ（title, authors, abstract）を取得
@@ -157,12 +158,22 @@ const app = new Hono<{ Bindings: Env }>()
   .route("/api/extractions", extractions)
   .route("/api/arxiv", arxiv);
 
-// MCP endpoint は .post("/mcp", ...) で別途追加（chain に含めてもよい）
+// MCP endpoint も chain に含める
+// .post("/mcp", bearerAuth(...), async (c) => { ... })
 
 export type AppType = typeof app;
+
+// Cloudflare Workers ランタイム用の default export は AppType とは別物
+// app (Hono instance) → AppType（hono/client 用の型）
+// default export → ExportedHandler（fetch, queue, scheduled を含む）
+export default {
+  fetch: app.fetch,
+  queue: async (batch: MessageBatch, env: Env) => { /* ... */ },
+  scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => { /* ... */ },
+} satisfies ExportedHandler<Env>;
 ```
 
-**重要:** Hono の型推論のため、ルート定義は `new Hono()` から method chain で繋ぐ。変数に代入して後から `.get()` を呼ぶと型が失われる。
+**重要:** Hono の型推論のため、ルート定義は `new Hono()` から method chain で繋ぐ。変数に代入して後から `.get()` を呼ぶと型が失われる。`AppType` は `typeof app` から導出し、`ExportedHandler` の default export とは別に管理する。
 
 ### tsconfig 要件
 
@@ -197,6 +208,10 @@ ronbun status <arxivId>
 ```
 
 `ingest` コマンドは廃止。取り込みは `search` / `show` から透過的に行う。
+
+**`search` vs `list` の使い分け:**
+- `search` -- 「何かを探す」。自然言語やキーワードでハイブリッド検索（FTS + ベクトル）。スコア順。DB になければ arXiv フォールバック
+- `list` -- 「一覧を見る」。フィルタ条件で絞り込み、日付やタイトルでソート。ページネーション対応。ブラウジング用途
 
 ### フラグと API パラメータの対応
 
@@ -417,7 +432,7 @@ stdin が TTY でない場合（パイプ、スクリプト実行時）:
 | コマンドパーサー | citty | unjs 製、軽量、サブコマンド対応、型安全 |
 | API クライアント | hono/client (hc) | 型安全、apps/api の AppType から自動推論 |
 | 色付け | ANSI 直書き | 外部依存なし |
-| 対話入力 | Bun の `process.stdin` + readline | Bun ネイティブ。非 TTY 検知は `process.stdin.isTTY` |
+| 対話入力 | `node:readline/promises` (`createInterface`) | Bun 互換の async API。非 TTY 検知は `process.stdin.isTTY` |
 | ランタイム | Bun | `#!/usr/bin/env bun` で直接実行。ビルドステップなし |
 
 ### hono/client の認証設定
