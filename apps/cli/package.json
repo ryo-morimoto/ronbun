@@ -1,26 +1,38 @@
 {
   "name": "@ronbun/cli",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "description": "CLI for searching and managing academic papers with ronbun",
+  "license": "MIT",
   "bin": {
-    "ronbun": "./src/index.ts"
+    "ronbun": "./dist/index.js"
   },
+  "files": [
+    "dist/index.js",
+    "README.md"
+  ],
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --target=node --outfile dist/index.js",
+    "prepublishOnly": "bun run build",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@ronbun/server": "workspace:*",
-    "citty": "^0.1.6",
-    "hono": "^4.7.6"
-  },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250514.0",
+    "@ronbun/server": "workspace:*",
     "@vitest/coverage-istanbul": "^3.2.4",
     "bun-types": "^1.2.3",
+    "citty": "^0.1.6",
+    "hono": "^4.7.6",
     "typescript": "^5.8.3",
     "vitest": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

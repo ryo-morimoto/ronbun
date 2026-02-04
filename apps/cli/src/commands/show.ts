@@ -1,5 +1,5 @@
 import { defineCommand } from "citty";
-import { createClient, handleResponse } from "../lib/client.ts";
+import { createClient, handleResponse, hasApiToken, requireApiToken } from "../lib/client.ts";
 import { formatDetail, formatPreview } from "../lib/format.ts";
 import { confirmPrompt } from "../lib/prompt.ts";
 import { red, dim } from "../lib/ansi.ts";
@@ -41,6 +41,7 @@ export default defineCommand({
           console.log("");
           const shouldReingest = await confirmPrompt("Paper ingestion failed. Re-ingest?");
           if (shouldReingest) {
+            requireApiToken("paper re-ingestion");
             const ingestRes = await client.api.papers.ingest.$post({
               json: { arxivId: id },
             });
@@ -79,21 +80,25 @@ export default defineCommand({
           return;
         }
 
-        // Fetch preview and ingest in parallel
-        const [previewRes, ingestRes] = await Promise.all([
-          client.api.arxiv[":arxivId"].preview.$get({
-            param: { arxivId: id },
-          }),
-          client.api.papers.ingest.$post({
-            json: { arxivId: id },
-          }),
-        ]);
-
+        const previewRes = await client.api.arxiv[":arxivId"].preview.$get({
+          param: { arxivId: id },
+        });
         const preview = await handleResponse<any>(previewRes);
-        await handleResponse<{ paperId: string }>(ingestRes);
-
         console.log(formatPreview(preview));
         console.log("");
+
+        if (!hasApiToken()) {
+          console.log(`  ${dim("Credentials are required. This feature is not available yet.")}`);
+          console.log("");
+          return;
+        }
+
+        requireApiToken("paper ingestion");
+        const ingestRes = await client.api.papers.ingest.$post({
+          json: { arxivId: id },
+        });
+        await handleResponse<{ paperId: string }>(ingestRes);
+
         console.log(
           `  ${dim("Ingesting in background. Check status with 'ronbun status " + id + "'.")}`,
         );

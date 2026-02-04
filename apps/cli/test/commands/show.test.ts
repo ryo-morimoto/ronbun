@@ -4,6 +4,8 @@ import { mockResponse, mockResponseError, captureConsole } from "./helpers.ts";
 // Mock modules
 vi.mock("../../src/lib/client.ts", () => ({
   createClient: vi.fn(),
+  hasApiToken: vi.fn(() => true),
+  requireApiToken: vi.fn(),
   handleResponse: vi.fn(async (res: any) => {
     if (res.ok) return res.json();
     if (res.status === 401) throw new Error("Authentication failed.");
@@ -18,7 +20,7 @@ vi.mock("../../src/lib/prompt.ts", () => ({
   selectPrompt: vi.fn().mockResolvedValue("skip"),
 }));
 
-import { createClient } from "../../src/lib/client.ts";
+import { createClient, hasApiToken } from "../../src/lib/client.ts";
 import { confirmPrompt } from "../../src/lib/prompt.ts";
 
 const readyPaperData = {
@@ -103,5 +105,26 @@ describe("show command", () => {
 
     // confirmPrompt asked for fetch
     expect(confirmPrompt).toHaveBeenCalled();
+  });
+
+  it("shows preview without ingest when token is missing", async () => {
+    mockClient.api.papers[":id"].$get.mockResolvedValue(mockResponseError(404));
+    mockClient.api.arxiv[":arxivId"].preview.$get.mockResolvedValue(
+      mockResponse({
+        arxivId: "2401.15884",
+        title: "Preview Title",
+        authors: ["Author A"],
+        abstract: "Preview abstract",
+        bodyText: null,
+      }),
+    );
+    vi.mocked(confirmPrompt).mockResolvedValue(true);
+    vi.mocked(hasApiToken).mockReturnValue(false);
+
+    const showCommand = (await import("../../src/commands/show.ts")).default;
+    await showCommand.run!({ args: { id: "2401.15884" } } as any);
+
+    expect(mockClient.api.papers.ingest.$post).not.toHaveBeenCalled();
+    expect(output.logs.some((l: string) => l.includes("Credentials are required"))).toBe(true);
   });
 });

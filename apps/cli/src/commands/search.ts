@@ -1,8 +1,8 @@
 import { defineCommand } from "citty";
-import { createClient, handleResponse } from "../lib/client.ts";
+import { createClient, handleResponse, hasApiToken, requireApiToken } from "../lib/client.ts";
 import { formatPaperRow } from "../lib/format.ts";
 import { confirmPrompt, selectPrompt } from "../lib/prompt.ts";
-import { red } from "../lib/ansi.ts";
+import { dim, red } from "../lib/ansi.ts";
 
 export default defineCommand({
   meta: {
@@ -98,6 +98,12 @@ export default defineCommand({
       });
       console.log("");
 
+      if (!hasApiToken()) {
+        console.log(`  ${dim("Credentials are required. This feature is not available yet.")}`);
+        console.log("");
+        return;
+      }
+
       // Prompt for selection
       const selection = await selectPrompt(
         "Select papers to ingest (e.g., 1,3-5) or press Enter to skip",
@@ -139,6 +145,7 @@ export default defineCommand({
       const arxivIds = selectedPapers.map((p) => p.arxivId || p.arxiv_id);
 
       // Batch ingest
+      requireApiToken("paper ingestion");
       const ingestRes = await client.api.papers["batch-ingest"].$post({
         json: { arxivIds },
       });
