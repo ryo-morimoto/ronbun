@@ -19,7 +19,9 @@ export function hasApiToken(): boolean {
 
 export function requireApiToken(operation: string): void {
   if (!hasApiToken()) {
-    throw new Error(`Credentials are required. This operation is not available yet (${operation}).`);
+    throw new Error(
+      `Credentials are required. This operation is not available yet (${operation}).`,
+    );
   }
 }
 
