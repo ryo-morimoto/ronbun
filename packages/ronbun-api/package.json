@@ -1,0 +1,28 @@
+{
+  "name": "@ronbun/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ronbun/arxiv": "workspace:*",
+    "@ronbun/database": "workspace:*",
+    "@ronbun/schemas": "workspace:*",
+    "@ronbun/storage": "workspace:*",
+    "@ronbun/types": "workspace:*",
+    "@ronbun/vector": "workspace:*",
+    "zod": "^3.25.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250514.0",
+    "typescript": "^5.8.3"
+  }
+}
