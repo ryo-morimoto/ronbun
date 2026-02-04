@@ -203,7 +203,7 @@ describe("Paper Ingestion Pipeline", () => {
       expect(mockQueue.messages[0].step).toBe("content");
     });
 
-    it("marks paper as failed on metadata fetch error", async () => {
+    it("throws on metadata fetch error without marking failed", async () => {
       vi.mocked(fetchArxivMetadata).mockRejectedValueOnce(new Error("API down"));
 
       await env.DB.prepare(
@@ -225,8 +225,8 @@ describe("Paper Ingestion Pipeline", () => {
       const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
         .bind("pm-fail")
         .first();
-      expect(paper!.status).toBe("failed");
-      expect(paper!.error).toContain("API down");
+      // Status should remain 'queued' — queue handler (not step) decides failed
+      expect(paper!.status).toBe("queued");
     });
   });
 
@@ -270,7 +270,7 @@ describe("Paper Ingestion Pipeline", () => {
       expect(mockQueue.messages[0].step).toBe("extraction");
     });
 
-    it("marks paper as failed when both HTML and PDF fail", async () => {
+    it("throws when both HTML and PDF fail without marking failed", async () => {
       vi.mocked(fetchArxivHtml).mockResolvedValueOnce(null);
 
       await env.DB.prepare(
@@ -292,7 +292,8 @@ describe("Paper Ingestion Pipeline", () => {
       const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
         .bind("pc-fail")
         .first();
-      expect(paper!.status).toBe("failed");
+      // Status should remain 'metadata'
+      expect(paper!.status).toBe("metadata");
     });
   });
 
@@ -453,7 +454,11 @@ describe("Paper Ingestion Pipeline", () => {
 
       const mockQueue = createMockQueue();
       const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
-      const msg: QueueMessage = { paperId: "idem-content", arxivId: "2406.idem02", step: "content" };
+      const msg: QueueMessage = {
+        paperId: "idem-content",
+        arxivId: "2406.idem02",
+        step: "content",
+      };
 
       await processQueueMessage(ctx, msg);
       const countAfterFirst = await env.DB.prepare(

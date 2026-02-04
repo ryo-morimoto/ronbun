@@ -20,6 +20,7 @@
         "@modelcontextprotocol/sdk": "^1.12.1",
         "@ronbun/api": "workspace:*",
         "@ronbun/arxiv": "workspace:*",
+        "@ronbun/database": "workspace:*",
         "@ronbun/types": "workspace:*",
         "hono": "^4.7.6",
         "zod": "^3.25.3",

@@ -46,7 +46,11 @@ export async function processQueueMessage(
   }
 }
 
-async function processMetadata(ctx: RonbunContext, arxivId: string, paperId: string): Promise<void> {
+async function processMetadata(
+  ctx: RonbunContext,
+  arxivId: string,
+  paperId: string,
+): Promise<void> {
   await deleteAuthorLinksByPaperId(ctx.db, paperId);
 
   const metadata = await fetchArxivMetadata(arxivId);

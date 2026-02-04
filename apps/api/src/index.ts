@@ -15,6 +15,7 @@ import {
   processQueueMessage,
 } from "@ronbun/api";
 import type { QueueMessage } from "@ronbun/types";
+import { updatePaperError, markPaperFailed } from "@ronbun/database";
 import { handleScheduled } from "./cron.ts";
 import { app } from "./app.ts";
 
@@ -227,12 +228,31 @@ export default {
   fetch: app.fetch,
   queue: async (batch: MessageBatch, env: Env) => {
     const ctx = createContext(env);
+    const MAX_RETRIES = 3; // matches wrangler.toml max_retries
     for (const message of batch.messages) {
+      const body = message.body as QueueMessage;
       try {
-        await processQueueMessage(ctx, message.body as QueueMessage);
+        await processQueueMessage(ctx, body);
         message.ack();
       } catch (error) {
-        console.error("Error processing message:", error);
+        const errorInfo = JSON.stringify({
+          step: body.step,
+          message: error instanceof Error ? error.message : String(error),
+          name: error instanceof Error ? error.name : "UnknownError",
+          attempt: message.attempts,
+        });
+        // Store latest error (status unchanged) — ignore DB write failures
+        await updatePaperError(ctx.db, body.paperId, errorInfo).catch(() => {});
+        if (message.attempts >= MAX_RETRIES) {
+          // Final retry exhausted — mark as permanently failed
+          await markPaperFailed(ctx.db, body.paperId, errorInfo).catch(() => {});
+          console.error(
+            `[${body.step}] permanently failed after ${message.attempts} attempts:`,
+            error,
+          );
+        } else {
+          console.error(`[${body.step}] attempt ${message.attempts}/${MAX_RETRIES}:`, error);
+        }
         message.retry();
       }
     }
