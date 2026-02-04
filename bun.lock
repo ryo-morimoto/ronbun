@@ -18,6 +18,17 @@
         "vitest": "^3.1.4",
       },
     },
+    "packages/ronbun-database": {
+      "name": "@ronbun/database",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ronbun/types": "workspace:*",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^4.20250514.0",
+        "typescript": "^5.8.3",
+      },
+    },
     "packages/ronbun-schemas": {
       "name": "@ronbun/schemas",
       "version": "0.0.0",
@@ -161,6 +172,8 @@
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.57.1", "", { "os": "win32", "cpu": "x64" }, "sha512-mxRFDdHIWRxg3UfIIAwCm6NzvxG0jDX/wBN6KsQFTvKFqqg9vTrWUE68qEjHt19A5wwx5X5aUi2zuZT7YR0jrA=="],
 
     "@ronbun/arxiv": ["@ronbun/arxiv@workspace:packages/ronbun-arxiv"],
+
+    "@ronbun/database": ["@ronbun/database@workspace:packages/ronbun-database"],
 
     "@ronbun/schemas": ["@ronbun/schemas@workspace:packages/ronbun-schemas"],
 
