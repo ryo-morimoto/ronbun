@@ -12,7 +12,7 @@ export function createClient() {
 
 export type Client = ReturnType<typeof createClient>;
 
-export async function handleResponse<T>(res: Response): Promise<T> {
+export async function handleResponse<T>(res: { ok: boolean; status: number; json(): Promise<unknown> }): Promise<T> {
   if (res.ok) {
     return (await res.json()) as T;
   }
