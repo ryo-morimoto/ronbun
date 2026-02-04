@@ -69,9 +69,54 @@ Per-app commands:
 ```bash
 cd apps/api && bun run dev       # API server dev
 cd apps/api && bun run test      # API integration tests
-cd apps/api && bun run deploy    # Deploy to Cloudflare
 cd apps/cli && bun run dev       # Run CLI locally
 ```
+
+> Deploy commands are in the [Deployment](#deployment) section below.
+
+## Deployment
+
+### Environments
+
+| Environment | Worker Name      | Deploy Trigger | Cron |
+| ----------- | ---------------- | -------------- | ---- |
+| Production  | `ronbun`         | Push to `main` | Yes  |
+| Preview     | `ronbun-preview` | Pull request   | No   |
+
+### Manual Deploy
+
+```bash
+# Preview
+bun run --cwd apps/api deploy:preview
+
+# Production
+bun run --cwd apps/api deploy:production
+```
+
+### Migrations
+
+```bash
+# Local (dev)
+bun run db:migrate:local
+
+# Preview
+bun run db:migrate:preview
+
+# Production
+bun run db:migrate:production
+```
+
+### Required Secrets
+
+**GitHub Actions:**
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+**Cloudflare (per environment):**
+
+- `API_TOKEN`
+- `ARXIV_CATEGORIES`
 
 ## MCP Tools
 
@@ -105,6 +150,11 @@ ronbun status <arxivId>
 - [x] Daily arXiv ingestion via OAI-PMH Cron trigger
 - [ ] Web frontend (`apps/web` -- TanStack Start on Cloudflare Pages)
 - [ ] Agent skills for MCP tool orchestration
+
+### Future Enhancements
+
+- **Paper relevance scoring** -- Pre-filter ingestion by scoring abstracts with Workers AI; only fully ingest papers above a relevance threshold, store metadata-only for the rest (with manual ingest option)
+- **Multi-source support** -- Extend beyond arXiv to other paper sources (Semantic Scholar, PubMed, OpenAlex)
 
 ## Environment Variables
 
