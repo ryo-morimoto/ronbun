@@ -6,33 +6,71 @@ compatibility_flags = ["nodejs_compat"]
 [ai]
 binding = "AI"
 
-[[d1_databases]]
+# ============================================================
+# Production
+# ============================================================
+[env.production]
+
+[[env.production.d1_databases]]
 binding = "DB"
-database_name = "arxiv-db"
-database_id = "placeholder-replace-after-creation"
+database_name = "ronbun-db"
+database_id = "d0772c16-cfed-4d3a-928d-657bc6a0af1d"
 migrations_dir = "../../migrations"
 
-[[r2_buckets]]
+[[env.production.r2_buckets]]
 binding = "STORAGE"
-bucket_name = "arxiv-papers"
+bucket_name = "ronbun-papers"
 
-[[vectorize]]
+[[env.production.vectorize]]
 binding = "VECTOR_INDEX"
-index_name = "arxiv-embeddings"
+index_name = "ronbun-embeddings"
 
-[[queues.producers]]
+[[env.production.queues.producers]]
 binding = "INGEST_QUEUE"
-queue = "arxiv-ingest"
+queue = "ronbun-ingest"
 
-[[queues.consumers]]
-queue = "arxiv-ingest"
+[[env.production.queues.consumers]]
+queue = "ronbun-ingest"
 max_batch_size = 5
 max_retries = 3
-dead_letter_queue = "arxiv-ingest-dlq"
+dead_letter_queue = "ronbun-ingest-dlq"
 
-[[queues.producers]]
+[[env.production.queues.producers]]
 binding = "INGEST_DLQ"
-queue = "arxiv-ingest-dlq"
+queue = "ronbun-ingest-dlq"
 
-[triggers]
+[env.production.triggers]
 crons = ["0 8 * * *"]
+
+# ============================================================
+# Preview
+# ============================================================
+[env.preview]
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "ronbun-db-preview"
+database_id = "<PREVIEW_DB_ID>"
+migrations_dir = "../../migrations"
+
+[[env.preview.r2_buckets]]
+binding = "STORAGE"
+bucket_name = "ronbun-papers-preview"
+
+[[env.preview.vectorize]]
+binding = "VECTOR_INDEX"
+index_name = "ronbun-embeddings-preview"
+
+[[env.preview.queues.producers]]
+binding = "INGEST_QUEUE"
+queue = "ronbun-ingest-preview"
+
+[[env.preview.queues.consumers]]
+queue = "ronbun-ingest-preview"
+max_batch_size = 5
+max_retries = 3
+dead_letter_queue = "ronbun-ingest-dlq-preview"
+
+[[env.preview.queues.producers]]
+binding = "INGEST_DLQ"
+queue = "ronbun-ingest-dlq-preview"
