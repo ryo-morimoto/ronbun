@@ -280,6 +280,33 @@ describe("papers", () => {
     });
   });
 
+  describe("updatePaperError", () => {
+    it("updates error column without changing status", async () => {
+      await env.DB.prepare(
+        "INSERT OR IGNORE INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'metadata', ?)",
+      )
+        .bind("upe-1", "2406.upe01", new Date().toISOString())
+        .run();
+
+      const { updatePaperError } = await import("../src/papers.ts");
+      await updatePaperError(
+        env.DB,
+        "upe-1",
+        JSON.stringify({
+          step: "content",
+          message: "fetch failed",
+          name: "Error",
+          attempt: 1,
+        }),
+      );
+
+      const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind("upe-1").first();
+      expect(paper!.status).toBe("metadata"); // unchanged
+      expect(paper!.error).toContain("fetch failed");
+      expect(JSON.parse(paper!.error as string).step).toBe("content");
+    });
+  });
+
   describe("fetchPapersByIds", () => {
     it("fetches multiple papers by ids (only ready)", async () => {
       await env.DB.prepare(

@@ -75,6 +75,14 @@ export async function markPaperFailed(
     .run();
 }
 
+export async function updatePaperError(
+  db: D1Database,
+  paperId: string,
+  errorJson: string,
+): Promise<void> {
+  await db.prepare("UPDATE papers SET error = ? WHERE id = ?").bind(errorJson, paperId).run();
+}
+
 export async function getPaperById(db: D1Database, id: string): Promise<PaperRow | null> {
   return db
     .prepare("SELECT * FROM papers WHERE id = ? OR arxiv_id = ?")
