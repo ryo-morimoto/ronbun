@@ -1,0 +1,20 @@
+{
+  "name": "@ronbun/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'TODO: configure TanStack Start dev server'",
+    "build": "echo 'TODO: configure TanStack Start build'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ronbun/api": "workspace:*",
+    "@ronbun/schemas": "workspace:*",
+    "@ronbun/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250514.0",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,9 @@
+name = "arxiv-mcp-server-test"
+main = "./helper.ts"
+compatibility_date = "2025-01-29"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "arxiv-db-test"
+database_id = "test-db-id"
