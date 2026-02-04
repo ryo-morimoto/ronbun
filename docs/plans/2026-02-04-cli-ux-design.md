@@ -109,7 +109,7 @@ $ ronbun search "transformer attention"
   2 results
 ```
 
-### show: DB → arXiv フォールバック
+### show: DB → arXiv フォールバック（即時表示 + バックグラウンド ingest）
 
 ```
 $ ronbun show 2401.15884
@@ -117,9 +117,26 @@ $ ronbun show 2401.15884
   Not found on ronbun.dev.
 
   Fetch from arXiv? [Y/n]:
-  ✓ Queued 2401.15884
-  Ingesting... (use `ronbun status 2401.15884` to check)
+
+  Attention Is All You Need            [arXiv HTML · body only]
+  2401.15884 · 2024-01-28
+
+  The dominant sequence transduction models are based on complex
+  recurrent or convolutional neural networks that include an encoder
+  and a decoder. The best performing models also connect the encoder
+  and decoder through an attention mechanism. We propose a new simple
+  network architecture, the Transformer, based solely on attention
+  mechanisms...
+
+  ─
+  ⟳ Ingesting in background (use `ronbun status 2401.15884` to check)
 ```
+
+- arXiv の HTML ページを直接取得し、本文テキストを即座に表示する
+- ingest は裏で Queue に投入（完了を待たない）
+- **制約:** HTML から取得できるのは本文のみ。セクション分割・抽出・引用グラフ・ベクトル検索はingest 完了後に利用可能
+- ヘッダーに `[arXiv HTML · body only]` と表示して、完全版ではないことを明示
+- ingest 完了後に再度 `ronbun show` すれば完全な詳細が表示される
 
 ### show: DB にある場合
 
