@@ -28,14 +28,14 @@ A fast, modern browser for academic papers. Available as an MCP server, web app,
 
 ```
 apps/
-  mcp/          MCP server on Cloudflare Workers (Hono + MCP SDK)
+  api/          REST + MCP + Cron server on Cloudflare Workers (@ronbun/server)
+  cli/          Terminal tool using citty + hono/client (@ronbun/cli)
   web/          Web frontend on Cloudflare Pages (TanStack Start) [WIP]
-  cli/          Terminal tool for paper operations
 
 packages/
   ronbun-types/      Shared TypeScript types
   ronbun-schemas/    Zod validation schemas
-  ronbun-arxiv/      arXiv API client & HTML/PDF parsing
+  ronbun-arxiv/      arXiv API client, HTML/PDF parsing, OAI-PMH
   ronbun-database/   D1 database operations
   ronbun-storage/    R2 object storage wrappers
   ronbun-vector/     Vectorize embedding & semantic search
@@ -67,9 +67,9 @@ bun run db:migrate:local
 Per-app commands:
 
 ```bash
-cd apps/mcp && bun run dev       # MCP server dev
-cd apps/mcp && bun run test      # MCP integration tests
-cd apps/mcp && bun run deploy    # Deploy to Cloudflare
+cd apps/api && bun run dev       # API server dev
+cd apps/api && bun run test      # API integration tests
+cd apps/api && bun run deploy    # Deploy to Cloudflare
 cd apps/cli && bun run dev       # Run CLI locally
 ```
 
@@ -85,18 +85,30 @@ cd apps/cli && bun run dev       # Run CLI locally
 | `list_papers` | List papers with filtering and pagination |
 | `find_related` | Find related papers via citations, shared methods/datasets/authors |
 
+## CLI Commands
+
+```bash
+ronbun search <query> [--category <cat>] [--year-from <y>] [--year-to <y>] [--limit <n>]
+ronbun show <paperId|arxivId>
+ronbun list [--status <s>] [--category <c>] [--year <y>] [--sort <field:order>] [--limit <n>]
+ronbun related <paperId> [--type <t>] [--limit <n>]
+ronbun extractions <query> [--type <t>] [--limit <n>]
+ronbun status <arxivId>
+```
+
 ## Roadmap
 
 - [x] Monorepo migration (Turborepo + bun workspaces)
 - [x] Shared domain packages (`@ronbun/*`)
-- [x] MCP server (`apps/mcp`)
-- [x] CLI tool (`apps/cli`)
+- [x] REST + MCP + Cron server (`apps/api`)
+- [x] CLI tool with citty + hono/client (`apps/cli`)
+- [x] Daily arXiv ingestion via OAI-PMH Cron trigger
 - [ ] Web frontend (`apps/web` -- TanStack Start on Cloudflare Pages)
 - [ ] Agent skills for MCP tool orchestration
 
 ## Environment Variables
 
-Copy `.dev.vars.example` to `.dev.vars` in `apps/mcp/` and fill in the required values.
+Copy `.dev.vars.example` to `.dev.vars` in `apps/api/` and fill in the required values.
 
 ## License
 
