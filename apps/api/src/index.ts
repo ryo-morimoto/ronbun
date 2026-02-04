@@ -1,8 +1,7 @@
-import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { z, ZodError } from "zod";
+import { z } from "zod";
 import type { Env } from "./env.ts";
 import type { RonbunContext } from "@ronbun/api";
 import {
@@ -16,10 +15,10 @@ import {
   processQueueMessage,
 } from "@ronbun/api";
 import type { QueueMessage } from "@ronbun/types";
-import papers from "./routes/papers.ts";
-import extractions from "./routes/extractions.ts";
-import arxiv from "./routes/arxiv.ts";
 import { handleScheduled } from "./cron.ts";
+import { app } from "./app.ts";
+
+export type { AppType } from "./app.ts";
 
 function createContext(env: Env): RonbunContext {
   return {
@@ -240,51 +239,24 @@ function createMcpServer(env: Env): McpServer {
   return server;
 }
 
-// --- Hono app with method chaining for AppType ---
-
-const api = new Hono<{ Bindings: Env }>()
-  .use("/*", async (c, next) => {
-    const auth = bearerAuth({
-      verifyToken: (token) => token === c.env.API_TOKEN,
+// Add MCP endpoint to the app
+app.post(
+  "/mcp",
+  bearerAuth({ verifyToken: (token, c) => token === c.env.API_TOKEN }),
+  async (c) => {
+    const server = createMcpServer(c.env);
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
     });
-    return auth(c, next);
-  })
-  .route("/papers", papers)
-  .route("/extractions", extractions)
-  .route("/arxiv", arxiv);
+    await server.connect(transport);
 
-const app = new Hono<{ Bindings: Env }>()
-  .get("/health", (c) => c.json({ status: "ok" }))
-  .route("/api", api)
-  .post(
-    "/mcp",
-    bearerAuth({ verifyToken: (token, c) => token === c.env.API_TOKEN }),
-    async (c) => {
-      const server = createMcpServer(c.env);
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined,
-      });
-      await server.connect(transport);
+    const body = await c.req.json();
 
-      const body = await c.req.json();
-
-      // Forward the raw request to the transport
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return transport.handleRequest(c.req.raw as any, body);
-    },
-  )
-  .onError((err, c) => {
-    if (err instanceof ZodError) {
-      return c.json(
-        { error: err.errors[0].message, code: "VALIDATION_ERROR" },
-        400,
-      );
-    }
-    console.error("Unhandled error:", err);
-    return c.json({ error: "Internal server error" }, 500);
-  });
-
-export type AppType = typeof app;
+    // Forward the raw request to the transport
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return transport.handleRequest(c.req.raw as any, body);
+  },
+);
 
 export default {
   fetch: app.fetch,

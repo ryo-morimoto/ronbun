@@ -1,0 +1,9 @@
+name = "ronbun-database-test"
+main = "../src/index.ts"
+compatibility_date = "2025-01-29"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ronbun-db-test"
+database_id = "test-db-id"

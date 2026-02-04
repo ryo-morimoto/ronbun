@@ -1,9 +1,21 @@
-name = "arxiv-mcp-server-test"
+name = "ronbun-test"
 main = "./helper.ts"
 compatibility_date = "2025-01-29"
 compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
 binding = "DB"
-database_name = "arxiv-db-test"
+database_name = "ronbun-db-test"
 database_id = "test-db-id"
+
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "test-papers"
+
+[[queues.producers]]
+binding = "INGEST_QUEUE"
+queue = "test-ingest"
+
+[[queues.producers]]
+binding = "INGEST_DLQ"
+queue = "test-ingest-dlq"

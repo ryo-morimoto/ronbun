@@ -1,185 +1,6 @@
 import { env } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
-
-const MIGRATION_SQL = `
-CREATE TABLE IF NOT EXISTS papers (
-  id TEXT PRIMARY KEY,
-  arxiv_id TEXT NOT NULL UNIQUE,
-  title TEXT,
-  authors TEXT,
-  abstract TEXT,
-  categories TEXT,
-  published_at TEXT,
-  updated_at TEXT,
-  status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'metadata', 'parsed', 'extracted', 'ready', 'failed')),
-  error TEXT,
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-  ingested_at TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_papers_arxiv_id ON papers(arxiv_id);
-CREATE INDEX IF NOT EXISTS idx_papers_status ON papers(status);
-
-CREATE TABLE IF NOT EXISTS sections (
-  id TEXT PRIMARY KEY,
-  paper_id TEXT NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
-  heading TEXT NOT NULL,
-  level INTEGER NOT NULL DEFAULT 1,
-  content TEXT NOT NULL,
-  position INTEGER NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
-);
-CREATE INDEX IF NOT EXISTS idx_sections_paper_id ON sections(paper_id);
-
-CREATE TABLE IF NOT EXISTS extractions (
-  id TEXT PRIMARY KEY,
-  paper_id TEXT NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('method', 'dataset', 'baseline', 'metric', 'result', 'contribution', 'limitation')),
-  name TEXT NOT NULL,
-  detail TEXT,
-  section_id TEXT REFERENCES sections(id) ON DELETE SET NULL,
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
-);
-CREATE INDEX IF NOT EXISTS idx_extractions_paper_id ON extractions(paper_id);
-
-CREATE TABLE IF NOT EXISTS citations (
-  id TEXT PRIMARY KEY,
-  source_paper_id TEXT NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
-  target_paper_id TEXT REFERENCES papers(id) ON DELETE SET NULL,
-  target_arxiv_id TEXT,
-  target_doi TEXT,
-  target_title TEXT,
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
-);
-CREATE INDEX IF NOT EXISTS idx_citations_source ON citations(source_paper_id);
-CREATE INDEX IF NOT EXISTS idx_citations_target ON citations(target_paper_id);
-
-CREATE TABLE IF NOT EXISTS entity_links (
-  id TEXT PRIMARY KEY,
-  paper_id TEXT NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
-  entity_type TEXT NOT NULL CHECK (entity_type IN ('method', 'dataset', 'author')),
-  entity_name TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
-);
-CREATE INDEX IF NOT EXISTS idx_entity_links_paper_id ON entity_links(paper_id);
-CREATE INDEX IF NOT EXISTS idx_entity_links_entity ON entity_links(entity_type, entity_name);
-`;
-
-async function applyMigration(db: D1Database) {
-  const statements = MIGRATION_SQL.split(";")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  for (const stmt of statements) {
-    await db.prepare(stmt).run();
-  }
-}
-
-async function seedTestData(db: D1Database) {
-  await db
-    .prepare(
-      `INSERT INTO papers (id, arxiv_id, title, authors, abstract, categories, published_at, status, created_at, ingested_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'ready', ?, ?)`,
-    )
-    .bind(
-      "paper-1",
-      "2401.15884",
-      "Corrective Retrieval Augmented Generation",
-      '["Shi-Qi Yan","Jia-Chen Gu"]',
-      "Large language models inevitably exhibit hallucinations. Retrieval-augmented generation is a practical approach.",
-      '["cs.CL","cs.AI"]',
-      "2024-01-28T00:00:00Z",
-      "2024-01-28T00:00:00Z",
-      "2024-01-28T01:00:00Z",
-    )
-    .run();
-
-  await db
-    .prepare(
-      `INSERT INTO papers (id, arxiv_id, title, authors, abstract, categories, published_at, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'ready', ?)`,
-    )
-    .bind(
-      "paper-2",
-      "2312.10997",
-      "Self-RAG: Learning to Retrieve",
-      '["Akari Asai"]',
-      "We introduce a new framework called Self-RAG that adaptively retrieves passages.",
-      '["cs.CL"]',
-      "2023-12-15T00:00:00Z",
-      "2023-12-15T00:00:00Z",
-    )
-    .run();
-
-  await db
-    .prepare(
-      `INSERT INTO papers (id, arxiv_id, title, status, created_at)
-     VALUES (?, ?, ?, 'queued', ?)`,
-    )
-    .bind("paper-3", "2405.00001", "Queued Paper", "2024-05-01T00:00:00Z")
-    .run();
-
-  await db
-    .prepare(
-      `INSERT INTO sections (id, paper_id, heading, level, content, position) VALUES (?, ?, ?, ?, ?, ?)`,
-    )
-    .bind(
-      "sec-1",
-      "paper-1",
-      "Introduction",
-      1,
-      "This paper introduces CRAG for corrective retrieval.",
-      0,
-    )
-    .run();
-
-  await db
-    .prepare(
-      `INSERT INTO sections (id, paper_id, heading, level, content, position) VALUES (?, ?, ?, ?, ?, ?)`,
-    )
-    .bind("sec-2", "paper-1", "Methods", 2, "We propose a lightweight retrieval evaluator.", 1)
-    .run();
-
-  await db
-    .prepare(
-      `INSERT INTO extractions (id, paper_id, type, name, detail, section_id) VALUES (?, ?, ?, ?, ?, ?)`,
-    )
-    .bind("ext-1", "paper-1", "method", "CRAG", "Corrective retrieval augmented generation", "sec-2")
-    .run();
-
-  await db
-    .prepare(
-      `INSERT INTO extractions (id, paper_id, type, name, detail, section_id) VALUES (?, ?, ?, ?, ?, ?)`,
-    )
-    .bind("ext-2", "paper-1", "dataset", "PopQA", "Open-domain QA benchmark", "sec-2")
-    .run();
-
-  await db
-    .prepare(
-      `INSERT INTO citations (id, source_paper_id, target_paper_id, target_arxiv_id, target_title) VALUES (?, ?, ?, ?, ?)`,
-    )
-    .bind("cit-1", "paper-1", "paper-2", "2312.10997", "Self-RAG: Learning to Retrieve")
-    .run();
-
-  await db
-    .prepare(
-      `INSERT INTO entity_links (id, paper_id, entity_type, entity_name) VALUES (?, ?, ?, ?)`,
-    )
-    .bind("el-1", "paper-1", "method", "RAG")
-    .run();
-
-  await db
-    .prepare(
-      `INSERT INTO entity_links (id, paper_id, entity_type, entity_name) VALUES (?, ?, ?, ?)`,
-    )
-    .bind("el-2", "paper-2", "method", "RAG")
-    .run();
-
-  await db
-    .prepare(
-      `INSERT INTO entity_links (id, paper_id, entity_type, entity_name) VALUES (?, ?, ?, ?)`,
-    )
-    .bind("el-3", "paper-1", "author", "Shi-Qi Yan")
-    .run();
-}
+import { applyMigration, seedTestData } from "./setup.ts";
 
 describe("D1 database operations", () => {
   beforeAll(async () => {
@@ -408,7 +229,7 @@ describe("D1 database operations", () => {
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)",
       )
-        .bind("paper-new", "2406.00001", "2024-06-01T00:00:00Z")
+        .bind("paper-new", "2499.00001", "2024-06-01T00:00:00Z")
         .run();
 
       let paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
@@ -431,7 +252,7 @@ describe("D1 database operations", () => {
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)",
       )
-        .bind("paper-fail", "2407.00001", "2024-07-01T00:00:00Z")
+        .bind("paper-fail", "2499.00002", "2024-07-01T00:00:00Z")
         .run();
 
       await env.DB.prepare("UPDATE papers SET status = 'failed', error = ? WHERE id = ?")

@@ -1,0 +1,8 @@
+name = "ronbun-storage-test"
+main = "../src/index.ts"
+compatibility_date = "2025-01-29"
+compatibility_flags = ["nodejs_compat"]
+
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "test-papers"
