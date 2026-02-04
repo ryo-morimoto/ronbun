@@ -33,3 +33,6 @@ dead_letter_queue = "arxiv-ingest-dlq"
 [[queues.producers]]
 binding = "INGEST_DLQ"
 queue = "arxiv-ingest-dlq"
+
+[triggers]
+crons = ["0 8 * * *"]

@@ -9,6 +9,25 @@
         "typescript": "^5.8.3",
       },
     },
+    "apps/api": {
+      "name": "@ronbun/server",
+      "version": "0.1.0",
+      "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.12.1",
+        "@ronbun/api": "workspace:*",
+        "@ronbun/arxiv": "workspace:*",
+        "@ronbun/types": "workspace:*",
+        "hono": "^4.7.6",
+        "zod": "^3.25.3",
+      },
+      "devDependencies": {
+        "@cloudflare/vitest-pool-workers": "^0.8.31",
+        "@cloudflare/workers-types": "^4.20250514.0",
+        "typescript": "^5.8.3",
+        "vitest": "^3.1.4",
+        "wrangler": "^4.14.4",
+      },
+    },
     "apps/cli": {
       "name": "@ronbun/cli",
       "version": "0.1.0",
@@ -22,24 +41,6 @@
       "devDependencies": {
         "bun-types": "^1.2.3",
         "typescript": "^5.8.3",
-      },
-    },
-    "apps/mcp": {
-      "name": "@ronbun/mcp",
-      "version": "0.1.0",
-      "dependencies": {
-        "@modelcontextprotocol/sdk": "^1.12.1",
-        "@ronbun/api": "workspace:*",
-        "@ronbun/types": "workspace:*",
-        "hono": "^4.7.6",
-        "zod": "^3.25.3",
-      },
-      "devDependencies": {
-        "@cloudflare/vitest-pool-workers": "^0.8.31",
-        "@cloudflare/workers-types": "^4.20250514.0",
-        "typescript": "^5.8.3",
-        "vitest": "^3.1.4",
-        "wrangler": "^4.14.4",
       },
     },
     "apps/web": {
@@ -326,9 +327,9 @@
 
     "@ronbun/database": ["@ronbun/database@workspace:packages/ronbun-database"],
 
-    "@ronbun/mcp": ["@ronbun/mcp@workspace:apps/mcp"],
-
     "@ronbun/schemas": ["@ronbun/schemas@workspace:packages/ronbun-schemas"],
+
+    "@ronbun/server": ["@ronbun/server@workspace:apps/api"],
 
     "@ronbun/storage": ["@ronbun/storage@workspace:packages/ronbun-storage"],
 

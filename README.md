@@ -1,24 +1,49 @@
 # ronbun
 
-A fast, modern browser for academic papers. Available as both a web app and an MCP server.
+A fast, modern browser for academic papers. Available as an MCP server, web app, and CLI.
 
 ## Features
 
-- Ingest arXiv papers (single or batch)
-- Hybrid search (semantic + keyword) across indexed papers
+- Ingest arXiv papers (single or batch via Cloudflare Queues)
+- Hybrid search (semantic + keyword) with Reciprocal Rank Fusion
 - AI-powered structured knowledge extraction (methods, datasets, results, etc.)
 - Citation graph and related paper discovery
 - MCP protocol support for AI assistant integration
+- CLI for terminal-based paper operations
 
 ## Tech Stack
 
 - **Runtime**: Cloudflare Workers
+- **Monorepo**: Turborepo + bun workspaces
 - **Framework**: Hono
 - **Database**: Cloudflare D1 (SQLite)
 - **Storage**: Cloudflare R2
 - **Vector Search**: Cloudflare Vectorize
 - **AI**: Cloudflare AI (embeddings + LLM extraction)
 - **Queue**: Cloudflare Queues (async paper ingestion)
+- **Validation**: Zod
+- **Testing**: Vitest + `@cloudflare/vitest-pool-workers`
+
+## Project Structure
+
+```
+apps/
+  mcp/          MCP server on Cloudflare Workers (Hono + MCP SDK)
+  web/          Web frontend on Cloudflare Pages (TanStack Start) [WIP]
+  cli/          Terminal tool for paper operations
+
+packages/
+  ronbun-types/      Shared TypeScript types
+  ronbun-schemas/    Zod validation schemas
+  ronbun-arxiv/      arXiv API client & HTML/PDF parsing
+  ronbun-database/   D1 database operations
+  ronbun-storage/    R2 object storage wrappers
+  ronbun-vector/     Vectorize embedding & semantic search
+  ronbun-api/        Business logic layer (DI via RonbunContext)
+
+migrations/
+  0001_init.sql      Database schema
+```
 
 ## Development
 
@@ -26,22 +51,52 @@ A fast, modern browser for academic papers. Available as both a web app and an M
 # Install dependencies
 bun install
 
-# Run locally
-bun run dev
+# Typecheck all packages
+bun run typecheck
 
-# Run tests
+# Run all tests
 bun run test
 
-# Type check
-bun run typecheck
+# Dev all apps
+bun run dev
 
 # Apply database migrations (local)
 bun run db:migrate:local
 ```
 
+Per-app commands:
+
+```bash
+cd apps/mcp && bun run dev       # MCP server dev
+cd apps/mcp && bun run test      # MCP integration tests
+cd apps/mcp && bun run deploy    # Deploy to Cloudflare
+cd apps/cli && bun run dev       # Run CLI locally
+```
+
+## MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `ingest_paper` | Ingest a single arXiv paper by ID |
+| `batch_ingest` | Ingest multiple papers by IDs or search query |
+| `search_papers` | Hybrid semantic + keyword search |
+| `search_extractions` | Search extracted knowledge across papers |
+| `get_paper` | Get full paper details with sections, extractions, citations |
+| `list_papers` | List papers with filtering and pagination |
+| `find_related` | Find related papers via citations, shared methods/datasets/authors |
+
+## Roadmap
+
+- [x] Monorepo migration (Turborepo + bun workspaces)
+- [x] Shared domain packages (`@ronbun/*`)
+- [x] MCP server (`apps/mcp`)
+- [x] CLI tool (`apps/cli`)
+- [ ] Web frontend (`apps/web` -- TanStack Start on Cloudflare Pages)
+- [ ] Agent skills for MCP tool orchestration
+
 ## Environment Variables
 
-Copy `.dev.vars.example` to `.dev.vars` and fill in the required values.
+Copy `.dev.vars.example` to `.dev.vars` in `apps/mcp/` and fill in the required values.
 
 ## License
 

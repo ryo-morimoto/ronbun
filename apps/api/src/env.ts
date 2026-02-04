@@ -8,4 +8,5 @@ export type Env = {
   INGEST_DLQ: Queue<QueueMessage>;
   AI: Ai;
   API_TOKEN: string;
+  ARXIV_CATEGORIES: string;
 };
