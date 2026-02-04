@@ -8,14 +8,18 @@
   },
   "scripts": {
     "dev": "bun run src/index.ts",
+    "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ronbun/schemas": "workspace:*",
-    "@ronbun/types": "workspace:*"
+    "@ronbun/server": "workspace:*",
+    "citty": "^0.1.6",
+    "hono": "^4.7.6"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250514.0",
     "bun-types": "^1.2.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.4"
   }
 }
