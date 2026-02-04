@@ -1,0 +1,35 @@
+name = "ronbun"
+main = "src/index.ts"
+compatibility_date = "2025-01-29"
+compatibility_flags = ["nodejs_compat"]
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "arxiv-db"
+database_id = "placeholder-replace-after-creation"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "arxiv-papers"
+
+[[vectorize]]
+binding = "VECTOR_INDEX"
+index_name = "arxiv-embeddings"
+
+[[queues.producers]]
+binding = "INGEST_QUEUE"
+queue = "arxiv-ingest"
+
+[[queues.consumers]]
+queue = "arxiv-ingest"
+max_batch_size = 5
+max_retries = 3
+dead_letter_queue = "arxiv-ingest-dlq"
+
+[[queues.producers]]
+binding = "INGEST_DLQ"
+queue = "arxiv-ingest-dlq"
