@@ -68,5 +68,4 @@ export type QueueMessage = {
   paperId: string;
   arxivId: string;
   step: QueueStep;
-  retryCount?: number;
 };

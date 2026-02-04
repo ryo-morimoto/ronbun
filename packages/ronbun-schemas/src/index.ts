@@ -60,5 +60,4 @@ export const queueMessageSchema = z.object({
   paperId: z.string(),
   arxivId: z.string(),
   step: z.enum(["metadata", "content", "extraction", "embedding"]),
-  retryCount: z.number().int().optional(),
 });
