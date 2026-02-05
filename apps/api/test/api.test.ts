@@ -31,23 +31,27 @@ describe("GET /health", () => {
 // Auth
 // ---------------------------------------------------------------------------
 describe("Authentication", () => {
-  it("returns 401 when no token is provided", async () => {
+  it("allows unauthenticated access to read endpoints", async () => {
     const res = await fetchApp("http://localhost/api/papers");
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 401 when wrong token is provided", async () => {
-    const res = await fetchApp("http://localhost/api/papers", {
-      headers: { Authorization: "Bearer wrong-token" },
-    });
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 200 when correct token is provided", async () => {
-    const res = await fetchApp("http://localhost/api/papers", {
-      headers: authHeaders(),
-    });
     expect(res.status).toBe(200);
+  });
+
+  it("returns 401 when no token is provided for write endpoints", async () => {
+    const res = await fetchApp("http://localhost/api/papers/ingest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ arxivId: "2401.00001" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 when wrong token is provided for write endpoints", async () => {
+    const res = await fetchApp("http://localhost/api/papers/ingest", {
+      method: "POST",
+      headers: { Authorization: "Bearer wrong-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ arxivId: "2401.00001" }),
+    });
+    expect(res.status).toBe(401);
   });
 });
 

@@ -3,13 +3,13 @@ main = "src/index.ts"
 compatibility_date = "2025-01-29"
 compatibility_flags = ["nodejs_compat"]
 
-[ai]
-binding = "AI"
-
 # ============================================================
 # Production
 # ============================================================
 [env.production]
+
+[env.production.ai]
+binding = "AI"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -46,6 +46,9 @@ crons = ["0 8 * * *"]
 # Preview
 # ============================================================
 [env.preview]
+
+[env.preview.ai]
+binding = "AI"
 
 [[env.preview.d1_databases]]
 binding = "DB"
