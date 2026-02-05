@@ -18,7 +18,7 @@
   },
   "scripts": {
     "dev": "bun run src/index.ts",
-    "build": "bun build src/index.ts --target=node --outfile dist/index.js",
+    "build": "bun build src/index.ts --target=node --outfile dist/index.js --define '__RONBUN_PRODUCTION_API_URL__=\"https://ronbun.ryo-o.dev\"'",
     "prepublishOnly": "bun run build",
     "test": "bunx vitest run --passWithNoTests",
     "typecheck": "bunx tsc --noEmit"

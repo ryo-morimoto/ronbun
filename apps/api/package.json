@@ -10,7 +10,7 @@
     }
   },
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --port 8787",
     "deploy:production": "wrangler deploy --env production",
     "deploy:preview": "wrangler deploy --env preview",
     "test": "vitest run",

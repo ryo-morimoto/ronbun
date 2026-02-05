@@ -8,6 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 # ============================================================
 [env.production]
 name = "ronbun"
+routes = [{ pattern = "ronbun.ryo-o.dev", custom_domain = true }]
 
 [env.production.ai]
 binding = "AI"

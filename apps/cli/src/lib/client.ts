@@ -1,13 +1,33 @@
 import { hc } from "hono/client";
 import type { AppType } from "@ronbun/server";
 
-const API_URL = process.env.RONBUN_API_URL ?? "http://localhost:8787";
+declare global {
+  var __RONBUN_PRODUCTION_API_URL__: string | undefined;
+}
+
+const PRODUCTION_API_URL = globalThis.__RONBUN_PRODUCTION_API_URL__;
+
+const API_URL = process.env.RONBUN_API_URL ?? PRODUCTION_API_URL ?? "http://localhost:8787";
 const API_TOKEN = process.env.RONBUN_API_TOKEN?.trim();
 
 export function createClient() {
   const headers = API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : undefined;
   return hc<AppType>(API_URL, {
     headers,
+    fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      try {
+        return await fetch(input, init);
+      } catch (err) {
+        if (err instanceof TypeError && err.message.includes("fetch")) {
+          throw new Error(
+            `Cannot connect to API server at ${API_URL}. ` +
+              `Please ensure the server is running (cd apps/api && bun run dev) ` +
+              `or set RONBUN_API_URL to the correct endpoint.`,
+          );
+        }
+        throw err;
+      }
+    },
   });
 }
 
