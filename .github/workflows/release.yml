@@ -7,79 +7,11 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  id-token: write
 
 jobs:
   release-please:
     name: Release Please
     runs-on: ubuntu-latest
-    outputs:
-      cli-release-created: ${{ steps.release.outputs.cli--release_created }}
-      cli-tag-name: ${{ steps.release.outputs.cli--tag_name }}
-      api-release-created: ${{ steps.release.outputs.api--release_created }}
-      api-tag-name: ${{ steps.release.outputs.api--tag_name }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
-
-  publish-cli:
-    name: Publish CLI to npm
-    needs: release-please
-    if: needs.release-please.outputs.cli-release-created == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - run: bun install --frozen-lockfile
-
-      - name: Build CLI
-        run: bun build src/index.ts --target=node --outfile dist/index.js
-        working-directory: apps/cli
-
-      - name: Ensure shebang
-        run: |
-          if ! head -1 dist/index.js | grep -q '^#!/'; then
-            sed -i '1i#!/usr/bin/env node' dist/index.js
-          fi
-        working-directory: apps/cli
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Publish to npm
-        run: npm publish --access public
-        working-directory: apps/cli
-
-  deploy-api:
-    name: Deploy API to Production
-    needs: release-please
-    if: needs.release-please.outputs.api-release-created == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - run: bun install --frozen-lockfile
-
-      - name: Apply D1 migrations (production)
-        run: bun run db:migrate:production
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Deploy to production
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/api
-          command: deploy --env production
