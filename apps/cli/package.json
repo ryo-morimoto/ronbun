@@ -20,8 +20,8 @@
     "dev": "bun run src/index.ts",
     "build": "bun build src/index.ts --target=node --outfile dist/index.js",
     "prepublishOnly": "bun run build",
-    "test": "vitest run --passWithNoTests",
-    "typecheck": "tsc --noEmit"
+    "test": "bunx vitest run --passWithNoTests",
+    "typecheck": "bunx tsc --noEmit"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250514.0",

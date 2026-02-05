@@ -38,17 +38,15 @@
       "name": "@ronbun/cli",
       "version": "0.1.0",
       "bin": {
-        "ronbun": "./src/index.ts",
-      },
-      "dependencies": {
-        "@ronbun/server": "workspace:*",
-        "citty": "^0.1.6",
-        "hono": "^4.7.6",
+        "ronbun": "./dist/index.js",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^4.20250514.0",
+        "@ronbun/server": "workspace:*",
         "@vitest/coverage-istanbul": "^3.2.4",
         "bun-types": "^1.2.3",
+        "citty": "^0.1.6",
+        "hono": "^4.7.6",
         "typescript": "^5.8.3",
         "vitest": "^3.1.4",
       },
