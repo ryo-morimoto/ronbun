@@ -50,7 +50,7 @@ crons = ["0 8 * * *"]
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "ronbun-db-preview"
-database_id = "<PREVIEW_DB_ID>"
+database_id = "4fccbcbb-d681-4365-8cae-5408aab3d267"
 migrations_dir = "../../migrations"
 
 [[env.preview.r2_buckets]]
