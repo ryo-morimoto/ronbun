@@ -1,19 +1,21 @@
 import { Hono } from "hono";
-import { bearerAuth } from "hono/bearer-auth";
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod";
 import type { Env } from "./env.ts";
 import papers from "./routes/papers.ts";
 import extractions from "./routes/extractions.ts";
 import arxiv from "./routes/arxiv.ts";
+import { createRateLimit } from "./middleware/rate-limit.ts";
 
 const api = new Hono<{ Bindings: Env }>()
-  .use("/*", async (c, next) => {
-    const auth = bearerAuth({
-      verifyToken: (token) => token === c.env.API_TOKEN,
-    });
-    return auth(c, next);
-  })
+  .use(
+    "/*",
+    createRateLimit({
+      keyPrefix: "api-global",
+      limit: 180,
+      windowMs: 60_000,
+    }),
+  )
   .route("/papers", papers)
   .route("/extractions", extractions)
   .route("/arxiv", arxiv);

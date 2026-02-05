@@ -1,5 +1,7 @@
 import { Hono } from "hono";
+import { bearerAuth } from "hono/bearer-auth";
 import type { Env } from "../env.ts";
+import { createRateLimit } from "../middleware/rate-limit.ts";
 import type { RonbunContext } from "@ronbun/api";
 import {
   searchPapers,
@@ -21,12 +23,20 @@ function createContext(env: Env): RonbunContext {
 }
 
 const papers = new Hono<{ Bindings: Env }>()
-  .post("/search", async (c) => {
-    const body = await c.req.json();
-    const ctx = createContext(c.env);
-    const result = await searchPapers(ctx, body);
-    return c.json(result);
-  })
+  .post(
+    "/search",
+    createRateLimit({
+      keyPrefix: "papers-search",
+      limit: 40,
+      windowMs: 60_000,
+    }),
+    async (c) => {
+      const body = await c.req.json();
+      const ctx = createContext(c.env);
+      const result = await searchPapers(ctx, body);
+      return c.json(result);
+    },
+  )
   .get("/", async (c) => {
     const ctx = createContext(c.env);
     const query = c.req.query();
@@ -48,18 +58,32 @@ const papers = new Hono<{ Bindings: Env }>()
     if (!result) return c.json({ error: "Paper not found" }, 404);
     return c.json(result);
   })
-  .post("/ingest", async (c) => {
-    const body = await c.req.json();
-    const ctx = createContext(c.env);
-    const result = await ingestPaper(ctx, body);
-    return c.json(result);
-  })
-  .post("/batch-ingest", async (c) => {
-    const body = await c.req.json();
-    const ctx = createContext(c.env);
-    const result = await batchIngest(ctx, body);
-    return c.json(result);
-  })
+  .post(
+    "/ingest",
+    async (c, next) => {
+      const auth = bearerAuth({ verifyToken: (token) => token === c.env.API_TOKEN });
+      return auth(c, next);
+    },
+    async (c) => {
+      const body = await c.req.json();
+      const ctx = createContext(c.env);
+      const result = await ingestPaper(ctx, body);
+      return c.json(result);
+    },
+  )
+  .post(
+    "/batch-ingest",
+    async (c, next) => {
+      const auth = bearerAuth({ verifyToken: (token) => token === c.env.API_TOKEN });
+      return auth(c, next);
+    },
+    async (c) => {
+      const body = await c.req.json();
+      const ctx = createContext(c.env);
+      const result = await batchIngest(ctx, body);
+      return c.json(result);
+    },
+  )
   .get("/:id/related", async (c) => {
     const ctx = createContext(c.env);
     const id = c.req.param("id");
