@@ -7,6 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 # Production
 # ============================================================
 [env.production]
+name = "ronbun"
 
 [env.production.ai]
 binding = "AI"
