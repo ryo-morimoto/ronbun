@@ -19,7 +19,7 @@ jobs:
       api-release-created: ${{ steps.release.outputs.api--release_created }}
       api-tag-name: ${{ steps.release.outputs.api--tag_name }}
     steps:
-      - uses: google-github-actions/release-please-action@v4
+      - uses: googleapis/release-please-action@v4
         id: release
 
   publish-cli:
