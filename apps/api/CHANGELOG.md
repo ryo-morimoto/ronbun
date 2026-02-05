@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/ryo-morimoto/ronbun/compare/api-v0.2.0...api-v0.3.0) (2026-02-05)
+
+
+### Features
+
+* **cli,api:** improve error handling and configure production deployment ([297ebfd](https://github.com/ryo-morimoto/ronbun/commit/297ebfd1ffb0290d30b7559a6d7f39dfab29dd94))
+
 ## [0.2.0](https://github.com/ryo-morimoto/ronbun/compare/api-v0.1.0...api-v0.2.0) (2026-02-05)
 
 ### Features
