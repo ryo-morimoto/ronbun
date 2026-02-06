@@ -16,9 +16,9 @@
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "prepare": "lefthook install",
-    "db:migrate:local": "bunx wrangler d1 migrations apply ronbun-db --local --config apps/api/wrangler.toml",
-    "db:migrate:preview": "bunx wrangler d1 migrations apply ronbun-db-preview --env preview --remote --config apps/api/wrangler.toml",
-    "db:migrate:production": "bunx wrangler d1 migrations apply ronbun-db --env production --remote --config apps/api/wrangler.toml"
+    "db:migrate:local": "bunx wrangler d1 migrations apply ronbun-db --local --config apps/web/wrangler.toml",
+    "db:migrate:preview": "bunx wrangler d1 migrations apply ronbun-db-preview --env preview --remote --config apps/web/wrangler.toml",
+    "db:migrate:production": "bunx wrangler d1 migrations apply ronbun-db --env production --remote --config apps/web/wrangler.toml"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
