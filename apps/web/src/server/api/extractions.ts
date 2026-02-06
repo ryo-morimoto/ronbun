@@ -1,8 +1,7 @@
 import { Hono } from "hono";
-import type { Env } from "../env.ts";
-import { createRateLimit } from "../middleware/rate-limit.ts";
 import type { RonbunContext } from "@ronbun/api";
 import { searchExtractions } from "@ronbun/api";
+import { createRateLimit } from "../middleware/rate-limit";
 
 function createContext(env: Env): RonbunContext {
   return {

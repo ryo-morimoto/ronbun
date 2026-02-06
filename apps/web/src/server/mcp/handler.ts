@@ -1,8 +1,6 @@
-import { bearerAuth } from "hono/bearer-auth";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
-import type { Env } from "./env.ts";
 import type { RonbunContext } from "@ronbun/api";
 import {
   ingestPaper,
@@ -12,14 +10,7 @@ import {
   getPaper,
   listPapers,
   findRelated,
-  processQueueMessage,
 } from "@ronbun/api";
-import type { QueueMessage } from "@ronbun/types";
-import { updatePaperError, markPaperFailed } from "@ronbun/database";
-import { handleScheduled } from "./cron.ts";
-import { app } from "./app.ts";
-
-export type { AppType } from "./app.ts";
 
 function createContext(env: Env): RonbunContext {
   return {
@@ -205,59 +196,37 @@ function createMcpServer(env: Env): McpServer {
   return server;
 }
 
-// Add MCP endpoint to the app
-app.post(
-  "/mcp",
-  bearerAuth({ verifyToken: (token, c) => token === c.env.API_TOKEN }),
-  async (c) => {
-    const server = createMcpServer(c.env);
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
+export async function handleMcpRequest(request: Request, env: Env): Promise<Response> {
+  // Verify bearer token
+  const auth = request.headers.get("authorization");
+  if (!auth || !auth.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
     });
-    await server.connect(transport);
+  }
+  const token = auth.slice(7);
+  if (token !== env.API_TOKEN) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
-    const body = await c.req.json();
+  const server = createMcpServer(env);
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+  });
+  await server.connect(transport);
 
-    // Forward the raw request to the transport
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return transport.handleRequest(c.req.raw as any, body);
-  },
-);
+  const body = await request.json();
 
-export default {
-  fetch: app.fetch,
-  queue: async (batch: MessageBatch, env: Env) => {
-    const ctx = createContext(env);
-    const MAX_RETRIES = 3; // matches wrangler.toml max_retries
-    for (const message of batch.messages) {
-      const body = message.body as QueueMessage;
-      try {
-        await processQueueMessage(ctx, body);
-        message.ack();
-      } catch (error) {
-        const errorInfo = JSON.stringify({
-          step: body.step,
-          message: error instanceof Error ? error.message : String(error),
-          name: error instanceof Error ? error.name : "UnknownError",
-          attempt: message.attempts,
-        });
-        // Store latest error (status unchanged) — ignore DB write failures
-        await updatePaperError(ctx.db, body.paperId, errorInfo).catch(() => {});
-        if (message.attempts >= MAX_RETRIES) {
-          // Final retry exhausted — mark as permanently failed
-          await markPaperFailed(ctx.db, body.paperId, errorInfo).catch(() => {});
-          console.error(
-            `[${body.step}] permanently failed after ${message.attempts} attempts:`,
-            error,
-          );
-        } else {
-          console.error(`[${body.step}] attempt ${message.attempts}/${MAX_RETRIES}:`, error);
-        }
-        message.retry();
-      }
-    }
-  },
-  scheduled: async (_controller, env, ctx) => {
-    ctx.waitUntil(handleScheduled(env));
-  },
-} satisfies ExportedHandler<Env>;
+  const response = await transport.handleRequest(request, body);
+  return (
+    response ??
+    new Response(JSON.stringify({ error: "MCP request failed" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    })
+  );
+}

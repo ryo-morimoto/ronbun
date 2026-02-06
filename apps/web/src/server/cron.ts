@@ -1,4 +1,3 @@
-import type { Env } from "./env.ts";
 import type { RonbunContext } from "@ronbun/api";
 import { ingestPaper } from "@ronbun/api";
 import { fetchNewPapersByCategory } from "@ronbun/arxiv";
@@ -33,9 +32,6 @@ export async function handleScheduled(env: Env): Promise<void> {
 
   console.log(`Cron: fetching papers for ${fromDate}, categories: ${categories.join(", ")}`);
 
-  // TODO: 取り込み前に abstract を Workers AI でスコアリングし、
-  // 関連度の高い論文だけ full ingest する評価機構を検討
-  // (メタデータのみ取得 → スコアリング → 閾値以上を Queue に送信)
   const arxivIds = await fetchNewPapersByCategory(categories, fromDate, untilDate);
   console.log(`Cron: found ${arxivIds.length} papers from OAI-PMH`);
 

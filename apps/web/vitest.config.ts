@@ -2,11 +2,10 @@ import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
 export default defineWorkersConfig({
   test: {
-    coverage: {
-      provider: "istanbul",
-    },
+    exclude: ["node_modules/**", "e2e/**", "playwright.config.ts", "dist/**"],
     poolOptions: {
       workers: {
+        singleWorker: true,
         isolatedStorage: false,
         wrangler: { configPath: "./test/wrangler.toml" },
         miniflare: {

@@ -1,4 +1,4 @@
-name = "ronbun-test"
+name = "ronbun-web-test"
 main = "./helper.ts"
 compatibility_date = "2025-01-29"
 compatibility_flags = ["nodejs_compat"]
@@ -11,6 +11,13 @@ database_id = "test-db-id"
 [[r2_buckets]]
 binding = "STORAGE"
 bucket_name = "test-papers"
+
+[[vectorize]]
+binding = "VECTOR_INDEX"
+index_name = "test-embeddings"
+
+[ai]
+binding = "AI"
 
 [[queues.producers]]
 binding = "INGEST_QUEUE"

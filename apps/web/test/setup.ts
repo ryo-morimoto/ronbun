@@ -138,6 +138,14 @@ export async function applyMigration(db: D1Database) {
   }
 }
 
+export async function clearTestData(db: D1Database) {
+  await db.prepare("DELETE FROM entity_links").run();
+  await db.prepare("DELETE FROM citations").run();
+  await db.prepare("DELETE FROM extractions").run();
+  await db.prepare("DELETE FROM sections").run();
+  await db.prepare("DELETE FROM papers").run();
+}
+
 export async function seedTestData(db: D1Database) {
   await db
     .prepare(

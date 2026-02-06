@@ -1,5 +1,5 @@
-name = "ronbun"
-main = "src/index.ts"
+name = "ronbun-web"
+main = "@tanstack/react-start/server-entry"
 compatibility_date = "2025-01-29"
 compatibility_flags = ["nodejs_compat"]
 
@@ -7,8 +7,6 @@ compatibility_flags = ["nodejs_compat"]
 # Production
 # ============================================================
 [env.production]
-name = "ronbun"
-routes = [{ pattern = "ronbun.ryo-o.dev", custom_domain = true }]
 
 [env.production.ai]
 binding = "AI"

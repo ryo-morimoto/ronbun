@@ -1,7 +1,5 @@
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
-import type { Env } from "../env.ts";
-import { createRateLimit } from "../middleware/rate-limit.ts";
 import type { RonbunContext } from "@ronbun/api";
 import {
   searchPapers,
@@ -11,6 +9,7 @@ import {
   batchIngest,
   findRelated,
 } from "@ronbun/api";
+import { createRateLimit } from "../middleware/rate-limit";
 
 function createContext(env: Env): RonbunContext {
   return {

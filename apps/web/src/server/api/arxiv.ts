@@ -1,13 +1,12 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { Env } from "../env.ts";
-import { createRateLimit } from "../middleware/rate-limit.ts";
 import {
   searchArxivPapersWithMetadata,
   fetchArxivMetadata,
   fetchArxivHtml,
   parseHtmlContent,
 } from "@ronbun/arxiv";
+import { createRateLimit } from "../middleware/rate-limit";
 
 const arxivSearchInput = z.object({
   query: z.string().min(1).max(200),

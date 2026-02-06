@@ -8,8 +8,8 @@
       "component": "cli",
       "changelog-path": "CHANGELOG.md"
     },
-    "apps/api": {
-      "component": "api",
+    "apps/web": {
+      "component": "web",
       "changelog-path": "CHANGELOG.md"
     }
   }

@@ -1,5 +1,5 @@
 import { hc } from "hono/client";
-import type { AppType } from "@ronbun/server";
+import type { AppType } from "@ronbun/web";
 
 declare global {
   var __RONBUN_PRODUCTION_API_URL__: string | undefined;

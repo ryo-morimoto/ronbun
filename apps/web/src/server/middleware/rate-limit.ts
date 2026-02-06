@@ -33,13 +33,11 @@ async function shortSha256(value: string): Promise<string> {
 }
 
 async function getClientKey(headers: Headers): Promise<string> {
-  // For authenticated clients, key by token fingerprint to avoid shared-IP collisions.
   const token = getBearerToken(headers);
   if (token) {
     return `token:${await shortSha256(token)}`;
   }
 
-  // For login-less usage, key by client IP headers from Cloudflare/proxies.
   const cfIp = headers.get("cf-connecting-ip");
   if (cfIp) return `ip:${cfIp}`;
 
@@ -53,7 +51,6 @@ async function getClientKey(headers: Headers): Promise<string> {
 }
 
 function collectExpiredBuckets(now: number): void {
-  // Cheap periodic cleanup to avoid unbounded memory growth per isolate.
   if (Math.random() > 0.01) return;
   for (const [key, bucket] of buckets.entries()) {
     if (bucket.resetAt <= now) {
