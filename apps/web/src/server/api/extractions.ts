@@ -1,17 +1,7 @@
 import { Hono } from "hono";
-import type { RonbunContext } from "@ronbun/api";
 import { searchExtractions } from "@ronbun/api";
 import { createRateLimit } from "../middleware/rate-limit";
-
-function createContext(env: Env): RonbunContext {
-  return {
-    db: env.DB,
-    storage: env.STORAGE,
-    vectorIndex: env.VECTOR_INDEX,
-    ai: env.AI,
-    queue: env.INGEST_QUEUE,
-  };
-}
+import { createRonbunContext } from "../context";
 
 const extractions = new Hono<{ Bindings: Env }>().post(
   "/search",
@@ -22,7 +12,7 @@ const extractions = new Hono<{ Bindings: Env }>().post(
   }),
   async (c) => {
     const body = await c.req.json();
-    const ctx = createContext(c.env);
+    const ctx = createRonbunContext(c.env);
     const result = await searchExtractions(ctx, body);
     return c.json(result);
   },

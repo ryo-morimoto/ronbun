@@ -87,10 +87,10 @@ cd apps/cli && bun run dev       # Run CLI locally
 
 ```bash
 # Preview
-bun run --cwd apps/api deploy:preview
+bun run --cwd apps/web deploy:preview
 
 # Production
-bun run --cwd apps/api deploy:production
+bun run --cwd apps/web deploy:production
 ```
 
 ### Migrations

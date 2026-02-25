@@ -1,16 +1,6 @@
-import type { RonbunContext } from "@ronbun/api";
 import { ingestPaper } from "@ronbun/api";
 import { fetchNewPapersByCategory } from "@ronbun/arxiv";
-
-function createContext(env: Env): RonbunContext {
-  return {
-    db: env.DB,
-    storage: env.STORAGE,
-    vectorIndex: env.VECTOR_INDEX,
-    ai: env.AI,
-    queue: env.INGEST_QUEUE,
-  };
-}
+import { createRonbunContext } from "./context";
 
 export async function handleScheduled(env: Env): Promise<void> {
   const categories = env.ARXIV_CATEGORIES
@@ -35,7 +25,7 @@ export async function handleScheduled(env: Env): Promise<void> {
   const arxivIds = await fetchNewPapersByCategory(categories, fromDate, untilDate);
   console.log(`Cron: found ${arxivIds.length} papers from OAI-PMH`);
 
-  const ctx = createContext(env);
+  const ctx = createRonbunContext(env);
   let queued = 0;
   let skipped = 0;
 

@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
-import type { RonbunContext } from "@ronbun/api";
 import {
   searchPapers,
   getPaper,
@@ -10,16 +9,7 @@ import {
   findRelated,
 } from "@ronbun/api";
 import { createRateLimit } from "../middleware/rate-limit";
-
-function createContext(env: Env): RonbunContext {
-  return {
-    db: env.DB,
-    storage: env.STORAGE,
-    vectorIndex: env.VECTOR_INDEX,
-    ai: env.AI,
-    queue: env.INGEST_QUEUE,
-  };
-}
+import { createRonbunContext } from "../context";
 
 const papers = new Hono<{ Bindings: Env }>()
   .post(
@@ -31,13 +21,13 @@ const papers = new Hono<{ Bindings: Env }>()
     }),
     async (c) => {
       const body = await c.req.json();
-      const ctx = createContext(c.env);
+      const ctx = createRonbunContext(c.env);
       const result = await searchPapers(ctx, body);
       return c.json(result);
     },
   )
   .get("/", async (c) => {
-    const ctx = createContext(c.env);
+    const ctx = createRonbunContext(c.env);
     const query = c.req.query();
     const result = await listPapers(ctx, {
       category: query.category,
@@ -51,7 +41,7 @@ const papers = new Hono<{ Bindings: Env }>()
     return c.json(result);
   })
   .get("/:id", async (c) => {
-    const ctx = createContext(c.env);
+    const ctx = createRonbunContext(c.env);
     const id = c.req.param("id");
     const result = await getPaper(ctx, { paperId: id });
     if (!result) return c.json({ error: "Paper not found" }, 404);
@@ -65,7 +55,7 @@ const papers = new Hono<{ Bindings: Env }>()
     },
     async (c) => {
       const body = await c.req.json();
-      const ctx = createContext(c.env);
+      const ctx = createRonbunContext(c.env);
       const result = await ingestPaper(ctx, body);
       return c.json(result);
     },
@@ -78,13 +68,13 @@ const papers = new Hono<{ Bindings: Env }>()
     },
     async (c) => {
       const body = await c.req.json();
-      const ctx = createContext(c.env);
+      const ctx = createRonbunContext(c.env);
       const result = await batchIngest(ctx, body);
       return c.json(result);
     },
   )
   .get("/:id/related", async (c) => {
-    const ctx = createContext(c.env);
+    const ctx = createRonbunContext(c.env);
     const id = c.req.param("id");
     const query = c.req.query();
     const result = await findRelated(ctx, {

@@ -1,7 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
-import type { RonbunContext } from "@ronbun/api";
 import {
   ingestPaper,
   batchIngest,
@@ -11,16 +10,7 @@ import {
   listPapers,
   findRelated,
 } from "@ronbun/api";
-
-function createContext(env: Env): RonbunContext {
-  return {
-    db: env.DB,
-    storage: env.STORAGE,
-    vectorIndex: env.VECTOR_INDEX,
-    ai: env.AI,
-    queue: env.INGEST_QUEUE,
-  };
-}
+import { createRonbunContext } from "../context";
 
 function mcpResult(data: unknown) {
   return {
@@ -29,7 +19,7 @@ function mcpResult(data: unknown) {
 }
 
 function createMcpServer(env: Env): McpServer {
-  const ctx = createContext(env);
+  const ctx = createRonbunContext(env);
   const server = new McpServer({
     name: "ronbun",
     version: "0.1.0",
