@@ -1,6 +1,6 @@
 import type { RonbunContext } from "./context.ts";
 import type { QueueMessage } from "@ronbun/types";
-import { queueMessageSchema, aiExtractionSchema } from "@ronbun/schemas";
+import { queueMessageSchema } from "@ronbun/schemas";
 import {
   fetchArxivMetadata,
   fetchArxivHtml,
@@ -13,23 +13,17 @@ import {
 } from "@ronbun/arxiv";
 import {
   updatePaperMetadata,
-  updatePaperStatus,
   markPaperReady,
-  getPaperArxivId,
   insertSection,
-  insertExtraction,
   insertEntityLink,
-  getSectionsForExtraction,
-  findPaperIdByArxivId,
   insertCitation,
+  findPaperIdByArxivId,
   deleteAuthorLinksByPaperId,
   deleteSectionsByPaperId,
   deleteCitationsBySourcePaperId,
-  deleteExtractionsByPaperId,
-  deleteNonAuthorEntityLinksByPaperId,
 } from "@ronbun/database";
 import { storeHtml, storePdf } from "@ronbun/storage";
-import { upsertSectionEmbeddings } from "@ronbun/vector";
+import { upsertPaperEmbedding } from "@ronbun/vector";
 
 export async function processQueueMessage(
   ctx: RonbunContext,
@@ -41,10 +35,6 @@ export async function processQueueMessage(
       return processMetadata(ctx, parsed.arxivId, parsed.paperId);
     case "content":
       return processContent(ctx, parsed.arxivId, parsed.paperId);
-    case "extraction":
-      return processExtraction(ctx, parsed.paperId);
-    case "embedding":
-      return processEmbedding(ctx, parsed.paperId);
   }
 }
 
@@ -60,6 +50,11 @@ async function processMetadata(
 
   for (const author of metadata.authors) {
     await insertEntityLink(ctx.db, generateId(), paperId, "author", author);
+  }
+
+  // Abstract embedding for semantic search
+  if (metadata.abstract) {
+    await upsertPaperEmbedding(ctx.vectorIndex, ctx.ai, paperId, metadata.abstract);
   }
 
   await ctx.queue.send({
@@ -124,141 +119,5 @@ async function processContent(ctx: RonbunContext, arxivId: string, paperId: stri
     }
   }
 
-  await updatePaperStatus(ctx.db, paperId, "parsed");
-
-  await ctx.queue.send({
-    arxivId,
-    paperId,
-    step: "extraction",
-  } satisfies QueueMessage);
-}
-
-async function processExtraction(ctx: RonbunContext, paperId: string): Promise<void> {
-  await deleteExtractionsByPaperId(ctx.db, paperId);
-  await deleteNonAuthorEntityLinksByPaperId(ctx.db, paperId);
-
-  const sections = await getSectionsForExtraction(ctx.db, paperId, 10);
-
-  for (const section of sections) {
-    const prompt = `Extract structured knowledge from this research paper section as JSON.
-
-Section: ${section.heading}
-Content: ${section.content.slice(0, 4000)}
-
-Extract the following as JSON arrays with {name, detail} objects:
-- methods: research methods or techniques used
-- datasets: datasets mentioned
-- baselines: baseline methods compared against
-- metrics: evaluation metrics
-- results: key numerical or qualitative results
-- contributions: main contributions claimed
-- limitations: limitations discussed
-
-Return only valid JSON with these keys.`;
-
-    try {
-      const response = await ctx.ai.run(
-        "@cf/meta/llama-3.1-8b-instruct" as Parameters<Ai["run"]>[0],
-        {
-          messages: [{ role: "user" as const, content: prompt }],
-        },
-      );
-
-      const responseText =
-        typeof response === "string"
-          ? response
-          : "response" in (response as Record<string, unknown>)
-            ? ((response as Record<string, unknown>).response as string)
-            : "";
-
-      const jsonText = stripMarkdownFences(responseText || "{}");
-      const parsed = safeJsonParse(jsonText);
-      if (!parsed) {
-        console.error(
-          "AI extraction returned unparseable JSON for section:",
-          section.id,
-          "raw:",
-          responseText,
-        );
-        continue;
-      }
-
-      const result = aiExtractionSchema.safeParse(parsed);
-      if (!result.success) {
-        console.error(
-          "AI extraction schema validation failed for section:",
-          section.id,
-          result.error.issues,
-        );
-        continue;
-      }
-
-      const extracted = result.data;
-      const typeMap: Record<string, string> = {
-        methods: "method",
-        datasets: "dataset",
-        baselines: "baseline",
-        metrics: "metric",
-        results: "result",
-        contributions: "contribution",
-        limitations: "limitation",
-      };
-
-      for (const key of Object.keys(typeMap) as (keyof typeof extracted)[]) {
-        const items = extracted[key];
-        for (const item of items) {
-          await insertExtraction(
-            ctx.db,
-            generateId(),
-            paperId,
-            typeMap[key],
-            item.name,
-            item.detail ?? null,
-            section.id,
-          );
-          if (key === "methods" || key === "datasets") {
-            await insertEntityLink(
-              ctx.db,
-              generateId(),
-              paperId,
-              typeMap[key] as "method" | "dataset",
-              item.name,
-            );
-          }
-        }
-      }
-    } catch (aiError) {
-      console.error("AI extraction failed for section:", section.id, aiError);
-    }
-  }
-
-  await updatePaperStatus(ctx.db, paperId, "extracted");
-
-  const arxivId = await getPaperArxivId(ctx.db, paperId);
-  if (!arxivId) throw new Error(`Paper not found: ${paperId}`);
-
-  await ctx.queue.send({
-    arxivId,
-    paperId,
-    step: "embedding",
-  } satisfies QueueMessage);
-}
-
-async function processEmbedding(ctx: RonbunContext, paperId: string): Promise<void> {
-  const sections = await getSectionsForExtraction(ctx.db, paperId, 100);
-  await upsertSectionEmbeddings(ctx.vectorIndex, ctx.ai, paperId, sections);
   await markPaperReady(ctx.db, paperId);
-}
-
-function stripMarkdownFences(text: string): string {
-  const fenced = text.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
-  return fenced ? fenced[1].trim() : text.trim();
-}
-
-function safeJsonParse(text: string): unknown | null {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
 }

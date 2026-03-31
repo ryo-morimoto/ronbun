@@ -1,30 +1,20 @@
 import type { RonbunContext } from "./context.ts";
-import type { ParsedPaper, SectionRow, ExtractionRow, CitationRow } from "@ronbun/types";
+import type { ParsedPaper, SectionRow, CitationRow } from "@ronbun/types";
 import { getPaperInput, listPapersInput, findRelatedInput } from "@ronbun/schemas";
 import {
   getPaperById,
   listPapers as dbListPapers,
   getSectionsByPaperId,
-  getExtractionsByPaperId,
   getCitationsBySource,
   getCitedBy,
-  getRelatedPapers,
   findSharedEntities,
 } from "@ronbun/database";
 
 export type PaperDetail = {
   paper: ParsedPaper;
   sections: SectionRow[];
-  extractions: ExtractionRow[];
   citations: CitationRow[];
   citedBy: Array<CitationRow & { source_title: string; source_arxiv_id: string }>;
-  relatedPapers: Array<{
-    paper_id: string;
-    title: string;
-    arxiv_id: string;
-    entity_type: string;
-    entity_name: string;
-  }>;
 };
 
 export async function getPaper(ctx: RonbunContext, input: unknown): Promise<PaperDetail | null> {
@@ -40,12 +30,10 @@ export async function getPaper(ctx: RonbunContext, input: unknown): Promise<Pape
   };
 
   const sections = await getSectionsByPaperId(ctx.db, paperResult.id);
-  const extractions = await getExtractionsByPaperId(ctx.db, paperResult.id);
   const citations = await getCitationsBySource(ctx.db, paperResult.id);
   const citedBy = await getCitedBy(ctx.db, paperResult.id);
-  const relatedPapers = await getRelatedPapers(ctx.db, paperResult.id);
 
-  return { paper, sections, extractions, citations, citedBy, relatedPapers };
+  return { paper, sections, citations, citedBy };
 }
 
 export type PaperListResult = {
@@ -104,13 +92,7 @@ export async function findRelated(
   }
 
   const actualPaperId = paperExists.id;
-  const types = linkTypes || [
-    "citation",
-    "cited_by",
-    "shared_method",
-    "shared_dataset",
-    "shared_author",
-  ];
+  const types = linkTypes || ["citation", "cited_by", "shared_author"];
 
   const relatedPapers: RelatedPaper[] = [];
   const seen = new Set<string>();
@@ -149,13 +131,8 @@ export async function findRelated(
     }
   }
 
-  const entityTypes: Array<"method" | "dataset" | "author"> = [];
-  if (types.includes("shared_method")) entityTypes.push("method");
-  if (types.includes("shared_dataset")) entityTypes.push("dataset");
-  if (types.includes("shared_author")) entityTypes.push("author");
-
-  for (const entityType of entityTypes) {
-    const shared = await findSharedEntities(ctx.db, actualPaperId, entityType);
+  if (types.includes("shared_author")) {
+    const shared = await findSharedEntities(ctx.db, actualPaperId, "author");
     for (const row of shared) {
       if (!seen.has(row.paper_id)) {
         seen.add(row.paper_id);
@@ -163,7 +140,7 @@ export async function findRelated(
           paperId: row.paper_id,
           title: row.title,
           arxivId: row.arxiv_id,
-          linkType: `shared_${entityType}`,
+          linkType: "shared_author",
           linkDetail: row.entity_name,
         });
       }

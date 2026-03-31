@@ -83,7 +83,6 @@ function PapersComponent() {
           <option value="queued">Queued</option>
           <option value="metadata">Metadata</option>
           <option value="parsed">Parsed</option>
-          <option value="extracted">Extracted</option>
           <option value="failed">Failed</option>
         </select>
       </div>

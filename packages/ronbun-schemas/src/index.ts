@@ -33,7 +33,7 @@ export const getPaperInput = z.object({
 export const listPapersInput = z.object({
   category: z.string().optional(),
   year: z.number().int().min(1990).max(2030).optional(),
-  status: z.enum(["queued", "metadata", "parsed", "extracted", "ready", "failed"]).optional(),
+  status: z.enum(["queued", "metadata", "parsed", "ready", "failed"]).optional(),
   sortBy: z.enum(["published_at", "created_at", "title"]).default("created_at"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
   cursor: z.string().optional(),
@@ -42,37 +42,12 @@ export const listPapersInput = z.object({
 
 export const findRelatedInput = z.object({
   paperId: z.string().min(1),
-  linkTypes: z
-    .array(z.enum(["citation", "cited_by", "shared_method", "shared_dataset", "shared_author"]))
-    .optional(),
+  linkTypes: z.array(z.enum(["citation", "cited_by", "shared_author"])).optional(),
   limit: z.number().int().min(1).max(50).default(10),
-});
-
-export const searchExtractionsInput = z.object({
-  query: z.string().min(1).max(500),
-  type: z
-    .enum(["method", "dataset", "baseline", "metric", "result", "contribution", "limitation"])
-    .optional(),
-  limit: z.number().int().min(1).max(50).default(20),
 });
 
 export const queueMessageSchema = z.object({
   paperId: z.string(),
   arxivId: z.string(),
-  step: z.enum(["metadata", "content", "extraction", "embedding"]),
-});
-
-const extractionItemSchema = z.object({
-  name: z.string(),
-  detail: z.string().nullable().optional(),
-});
-
-export const aiExtractionSchema = z.object({
-  methods: z.array(extractionItemSchema).default([]),
-  datasets: z.array(extractionItemSchema).default([]),
-  baselines: z.array(extractionItemSchema).default([]),
-  metrics: z.array(extractionItemSchema).default([]),
-  results: z.array(extractionItemSchema).default([]),
-  contributions: z.array(extractionItemSchema).default([]),
-  limitations: z.array(extractionItemSchema).default([]),
+  step: z.enum(["metadata", "content"]),
 });

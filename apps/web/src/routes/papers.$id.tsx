@@ -9,13 +9,6 @@ type Section = {
   content: string;
 };
 
-type Extraction = {
-  id: string;
-  type: string;
-  name: string;
-  detail: string | null;
-};
-
 type Citation = {
   id: string;
   target_title: string | null;
@@ -26,14 +19,6 @@ type CitedBy = {
   id: string;
   source_title: string;
   source_arxiv_id: string;
-};
-
-type RelatedPaper = {
-  paper_id: string;
-  title: string;
-  arxiv_id: string;
-  entity_type: string;
-  entity_name: string;
 };
 
 type Paper = {
@@ -50,10 +35,8 @@ type Paper = {
 type PaperDetailResponse = {
   paper: Paper;
   sections: Section[];
-  extractions: Extraction[];
   citations: Citation[];
   citedBy: CitedBy[];
-  relatedPapers: RelatedPaper[];
 };
 
 export const Route = createFileRoute("/papers/$id")({
@@ -63,7 +46,7 @@ export const Route = createFileRoute("/papers/$id")({
 function PaperDetailComponent() {
   const { id } = Route.useParams();
 
-  const { data, isLoading, error } = useQuery<PaperDetailResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["paper", id],
     queryFn: async () => {
       const response = await apiClient.api.papers[":id"].$get({
@@ -77,22 +60,7 @@ function PaperDetailComponent() {
         throw new Error("Failed to fetch paper details");
       }
 
-      const result = await response.json();
-      // Parse JSON arrays from API response
-      return {
-        ...result,
-        paper: {
-          ...result.paper,
-          authors:
-            typeof result.paper.authors === "string"
-              ? JSON.parse(result.paper.authors)
-              : result.paper.authors || [],
-          categories:
-            typeof result.paper.categories === "string"
-              ? JSON.parse(result.paper.categories)
-              : result.paper.categories || [],
-        },
-      } as PaperDetailResponse;
+      return response.json() as unknown as PaperDetailResponse;
     },
   });
 
@@ -119,7 +87,7 @@ function PaperDetailComponent() {
     );
   }
 
-  const { paper, sections, extractions, citations, citedBy, relatedPapers } = data!;
+  const { paper, sections, citations, citedBy } = data!;
 
   return (
     <div className="space-y-6">
@@ -182,26 +150,6 @@ function PaperDetailComponent() {
         </div>
       )}
 
-      {/* Extractions */}
-      {extractions.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Key Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {extractions.map((extraction) => (
-              <div key={extraction.id} className="border rounded-lg p-4">
-                <span className="text-xs font-medium text-blue-600 uppercase">
-                  {extraction.type}
-                </span>
-                <h3 className="font-medium mt-1">{extraction.name}</h3>
-                {extraction.detail && (
-                  <p className="text-sm text-gray-600 mt-1">{extraction.detail}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Sections */}
       {sections.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
@@ -251,28 +199,6 @@ function PaperDetailComponent() {
               </li>
             ))}
           </ul>
-        </div>
-      )}
-
-      {/* Related Papers */}
-      {relatedPapers.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Related Papers</h2>
-          <div className="space-y-3">
-            {relatedPapers.map((related) => (
-              <Link
-                key={related.paper_id}
-                to="/papers/$id"
-                params={{ id: related.paper_id }}
-                className="block border rounded-lg p-4 hover:bg-gray-50 transition"
-              >
-                <h3 className="font-medium text-blue-600 hover:underline">{related.title}</h3>
-                <p className="text-sm text-gray-500">
-                  {related.entity_type}: {related.entity_name}
-                </p>
-              </Link>
-            ))}
-          </div>
         </div>
       )}
     </div>

@@ -1,14 +1,9 @@
 import type { RonbunContext } from "./context.ts";
 import type { PaperRow } from "@ronbun/types";
-import { searchPapersInput, searchExtractionsInput } from "@ronbun/schemas";
-import {
-  searchPapersFts,
-  searchSectionsFts,
-  fetchPapersByIds,
-  searchExtractionsFts,
-  getCitationCounts,
-} from "@ronbun/database";
+import { searchPapersInput } from "@ronbun/schemas";
+import { searchPapersFts, searchSectionsFts, fetchPapersByIds } from "@ronbun/database";
 import { semanticSearch } from "@ronbun/vector";
+import { getCitationCounts } from "@ronbun/database";
 
 export type SearchResult = {
   id: string;
@@ -19,16 +14,6 @@ export type SearchResult = {
   categories: string[];
   publishedAt: string;
   score: number;
-};
-
-export type ExtractionSearchResult = {
-  id: string;
-  paperId: string;
-  type: string;
-  name: string;
-  detail: string | null;
-  paperTitle: string;
-  arxivId: string;
 };
 
 function mergeWithRRF(
@@ -98,7 +83,7 @@ export async function searchPapers(
     }
   }
 
-  // 3. Semantic search
+  // 3. Semantic search (abstract-level vectors)
   const { scores: vectorScores, degraded: searchDegraded } = await semanticSearch(
     ctx.vectorIndex,
     ctx.ai,
@@ -123,7 +108,6 @@ export async function searchPapers(
   const citationCounts = await getCitationCounts(ctx.db, allCandidateIds);
   for (const [paperId, rrfScore] of rrfScores) {
     const citations = citationCounts.get(paperId) ?? 0;
-    // log1p dampens the effect: 1 citation ≈ +0.011, 10 ≈ +0.038, 100 ≈ +0.077
     rrfScores.set(paperId, rrfScore + Math.log1p(citations) / 30);
   }
 
@@ -155,28 +139,6 @@ export async function searchPapers(
   }
 
   return { papers: results, searchMode: searchDegraded ? "fts-only" : "hybrid" };
-}
-
-export async function searchExtractions(
-  ctx: RonbunContext,
-  input: unknown,
-): Promise<{ extractions: ExtractionSearchResult[] }> {
-  const validated = searchExtractionsInput.parse(input);
-  const { query, type, limit } = validated;
-
-  const searchResults = await searchExtractionsFts(ctx.db, query, type || null, limit);
-
-  const results: ExtractionSearchResult[] = searchResults.map((row) => ({
-    id: row.id,
-    paperId: row.paper_id,
-    type: row.type,
-    name: row.name,
-    detail: row.detail,
-    paperTitle: row.paper_title,
-    arxivId: row.arxiv_id,
-  }));
-
-  return { extractions: results };
 }
 
 function parseJsonArray(value: string | null | undefined): string[] {

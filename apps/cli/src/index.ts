@@ -13,7 +13,6 @@ const main = defineCommand({
     show: () => import("./commands/show.ts").then((m) => m.default),
     list: () => import("./commands/list.ts").then((m) => m.default),
     related: () => import("./commands/related.ts").then((m) => m.default),
-    extractions: () => import("./commands/extractions.ts").then((m) => m.default),
     status: () => import("./commands/status.ts").then((m) => m.default),
   },
 });
