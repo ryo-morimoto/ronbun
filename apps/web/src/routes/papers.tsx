@@ -3,22 +3,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "../lib/api";
 
-type Paper = {
-  id: string;
-  arxiv_id: string;
-  title: string | null;
-  authors: string[];
-  abstract: string | null;
-  categories: string[];
-  status: string;
-};
-
-type PapersResponse = {
-  papers: Paper[];
-  cursor: string | null;
-  hasMore: boolean;
-};
-
 export const Route = createFileRoute("/papers")({
   component: PapersComponent,
 });
@@ -28,7 +12,7 @@ function PapersComponent() {
   const [category, setCategory] = useState<string>("");
   const [status, setStatus] = useState<string>("");
 
-  const { data, isLoading, error } = useQuery<PapersResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["papers", cursor, category, status],
     queryFn: async () => {
       const response = await apiClient.api.papers.$get({
@@ -43,17 +27,7 @@ function PapersComponent() {
         throw new Error("Failed to fetch papers");
       }
 
-      const result = await response.json();
-      // Parse JSON arrays from API response
-      return {
-        ...result,
-        papers: result.papers.map((p: Record<string, unknown>) => ({
-          ...p,
-          authors: typeof p.authors === "string" ? JSON.parse(p.authors) : p.authors || [],
-          categories:
-            typeof p.categories === "string" ? JSON.parse(p.categories) : p.categories || [],
-        })) as Paper[],
-      };
+      return response.json();
     },
   });
 

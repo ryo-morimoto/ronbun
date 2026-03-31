@@ -84,6 +84,9 @@
     "packages/ronbun-arxiv": {
       "name": "@ronbun/arxiv",
       "version": "0.0.0",
+      "dependencies": {
+        "pdf-oxide-wasm": "^0.3.17",
+      },
       "devDependencies": {
         "@cloudflare/workers-types": "^4.20250514.0",
         "typescript": "^5.8.3",
@@ -913,6 +916,8 @@
     "pathe": ["pathe@2.0.3", "", {}, "sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w=="],
 
     "pathval": ["pathval@2.0.1", "", {}, "sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ=="],
+
+    "pdf-oxide-wasm": ["pdf-oxide-wasm@0.3.17", "", {}, "sha512-eyRurtCNigC6BeyiaonDyXWMgqt6om+eMkxtit9YHHQjPj5fNn+YbDFEC+2F5/3LiXD1p9uTHRHa41WyoCNAVg=="],
 
     "picocolors": ["picocolors@1.1.1", "", {}, "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="],
 

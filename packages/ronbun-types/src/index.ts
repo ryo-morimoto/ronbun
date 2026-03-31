@@ -15,6 +15,11 @@ export type PaperRow = {
   ingested_at: string | null;
 };
 
+export type ParsedPaper = Omit<PaperRow, "authors" | "categories"> & {
+  authors: string[];
+  categories: string[];
+};
+
 export type SectionRow = {
   id: string;
   paper_id: string;

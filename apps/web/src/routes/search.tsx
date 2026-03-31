@@ -2,20 +2,11 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "../lib/api";
-
-type SearchResult = {
-  id: string;
-  arxivId: string;
-  title: string;
-  authors: string;
-  abstract: string;
-  categories: string;
-  publishedAt: string;
-  score: number;
-};
+import type { SearchResult } from "@ronbun/api";
 
 type SearchResponse = {
   papers: SearchResult[];
+  searchMode: "hybrid" | "fts-only";
 };
 
 export const Route = createFileRoute("/search")({
@@ -27,11 +18,11 @@ function SearchComponent() {
   const [category, setCategory] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data, isLoading, error } = useQuery<SearchResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["search", searchQuery, category],
     queryFn: async () => {
       if (!searchQuery) {
-        return { papers: [] };
+        return { papers: [], searchMode: "hybrid" as const } satisfies SearchResponse;
       }
 
       const response = await apiClient.api.papers.search.$post({
@@ -121,25 +112,22 @@ function SearchComponent() {
                     {paper.title || "Untitled"}
                   </h3>
                   <p className="text-sm text-gray-600 mb-2">
-                    {paper.authors.split(",").slice(0, 3).join(", ")}
-                    {paper.authors.split(",").length > 3 ? " et al." : ""}
+                    {paper.authors.slice(0, 3).join(", ")}
+                    {paper.authors.length > 3 ? " et al." : ""}
                   </p>
                   <p className="text-sm text-gray-500 line-clamp-2">
                     {paper.abstract || "No abstract available"}
                   </p>
-                  {paper.categories && (
+                  {paper.categories.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {paper.categories
-                        .split(" ")
-                        .slice(0, 3)
-                        .map((cat: string) => (
-                          <span
-                            key={cat}
-                            className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded"
-                          >
-                            {cat}
-                          </span>
-                        ))}
+                      {paper.categories.slice(0, 3).map((cat: string) => (
+                        <span
+                          key={cat}
+                          className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded"
+                        >
+                          {cat}
+                        </span>
+                      ))}
                     </div>
                   )}
                 </div>

@@ -1,12 +1,14 @@
 import type { RonbunContext } from "./context.ts";
 import type { QueueMessage } from "@ronbun/types";
-import { queueMessageSchema } from "@ronbun/schemas";
+import { queueMessageSchema, aiExtractionSchema } from "@ronbun/schemas";
 import {
   fetchArxivMetadata,
   fetchArxivHtml,
+  fetchArxivNativeHtml,
   fetchArxivPdf,
   parseHtmlContent,
   parsePdfText,
+  extractPdfText,
   generateId,
 } from "@ronbun/arxiv";
 import {
@@ -73,17 +75,28 @@ async function processContent(ctx: RonbunContext, arxivId: string, paperId: stri
 
   let parsedContent;
 
+  // Tier 1: ar5iv HTML (best quality, ~77% coverage)
   const htmlContent = await fetchArxivHtml(arxivId);
   if (htmlContent) {
     await storeHtml(ctx.storage, arxivId, htmlContent);
     parsedContent = parseHtmlContent(htmlContent);
   }
 
+  // Tier 2: arXiv native HTML (post-Dec 2023 papers)
+  if (!parsedContent) {
+    const nativeHtml = await fetchArxivNativeHtml(arxivId);
+    if (nativeHtml) {
+      await storeHtml(ctx.storage, arxivId, nativeHtml);
+      parsedContent = parseHtmlContent(nativeHtml);
+    }
+  }
+
+  // Tier 3: PDF text extraction via pdf-oxide-wasm (XY-Cut reading order)
   if (!parsedContent) {
     const pdfBuffer = await fetchArxivPdf(arxivId);
     if (pdfBuffer) {
       await storePdf(ctx.storage, arxivId, pdfBuffer);
-      const textContent = new TextDecoder().decode(pdfBuffer);
+      const textContent = await extractPdfText(pdfBuffer);
       parsedContent = parsePdfText(textContent);
     }
   }
@@ -158,17 +171,29 @@ Return only valid JSON with these keys.`;
             ? ((response as Record<string, unknown>).response as string)
             : "";
 
-      const extracted = JSON.parse(responseText || "{}");
+      const jsonText = stripMarkdownFences(responseText || "{}");
+      const parsed = safeJsonParse(jsonText);
+      if (!parsed) {
+        console.error(
+          "AI extraction returned unparseable JSON for section:",
+          section.id,
+          "raw:",
+          responseText,
+        );
+        continue;
+      }
 
-      const types = [
-        "methods",
-        "datasets",
-        "baselines",
-        "metrics",
-        "results",
-        "contributions",
-        "limitations",
-      ] as const;
+      const result = aiExtractionSchema.safeParse(parsed);
+      if (!result.success) {
+        console.error(
+          "AI extraction schema validation failed for section:",
+          section.id,
+          result.error.issues,
+        );
+        continue;
+      }
+
+      const extracted = result.data;
       const typeMap: Record<string, string> = {
         methods: "method",
         datasets: "dataset",
@@ -179,30 +204,26 @@ Return only valid JSON with these keys.`;
         limitations: "limitation",
       };
 
-      for (const key of types) {
+      for (const key of Object.keys(typeMap) as (keyof typeof extracted)[]) {
         const items = extracted[key];
-        if (Array.isArray(items)) {
-          for (const item of items) {
-            if (item?.name) {
-              await insertExtraction(
-                ctx.db,
-                generateId(),
-                paperId,
-                typeMap[key],
-                item.name,
-                item.detail ?? null,
-                section.id,
-              );
-              if (key === "methods" || key === "datasets") {
-                await insertEntityLink(
-                  ctx.db,
-                  generateId(),
-                  paperId,
-                  typeMap[key] as "method" | "dataset",
-                  item.name,
-                );
-              }
-            }
+        for (const item of items) {
+          await insertExtraction(
+            ctx.db,
+            generateId(),
+            paperId,
+            typeMap[key],
+            item.name,
+            item.detail ?? null,
+            section.id,
+          );
+          if (key === "methods" || key === "datasets") {
+            await insertEntityLink(
+              ctx.db,
+              generateId(),
+              paperId,
+              typeMap[key] as "method" | "dataset",
+              item.name,
+            );
           }
         }
       }
@@ -227,4 +248,17 @@ async function processEmbedding(ctx: RonbunContext, paperId: string): Promise<vo
   const sections = await getSectionsForExtraction(ctx.db, paperId, 100);
   await upsertSectionEmbeddings(ctx.vectorIndex, ctx.ai, paperId, sections);
   await markPaperReady(ctx.db, paperId);
+}
+
+function stripMarkdownFences(text: string): string {
+  const fenced = text.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
+  return fenced ? fenced[1].trim() : text.trim();
+}
+
+function safeJsonParse(text: string): unknown | null {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }

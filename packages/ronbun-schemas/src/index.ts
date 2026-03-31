@@ -61,3 +61,18 @@ export const queueMessageSchema = z.object({
   arxivId: z.string(),
   step: z.enum(["metadata", "content", "extraction", "embedding"]),
 });
+
+const extractionItemSchema = z.object({
+  name: z.string(),
+  detail: z.string().nullable().optional(),
+});
+
+export const aiExtractionSchema = z.object({
+  methods: z.array(extractionItemSchema).default([]),
+  datasets: z.array(extractionItemSchema).default([]),
+  baselines: z.array(extractionItemSchema).default([]),
+  metrics: z.array(extractionItemSchema).default([]),
+  results: z.array(extractionItemSchema).default([]),
+  contributions: z.array(extractionItemSchema).default([]),
+  limitations: z.array(extractionItemSchema).default([]),
+});

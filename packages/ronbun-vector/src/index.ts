@@ -5,12 +5,17 @@ export async function generateEmbedding(ai: Ai, text: string): Promise<number[]>
   return (response as { data: number[][] }).data[0];
 }
 
+export type SemanticSearchResult = {
+  scores: Map<string, number>;
+  degraded: boolean;
+};
+
 export async function semanticSearch(
   vectorIndex: VectorizeIndex,
   ai: Ai,
   query: string,
   topK: number,
-): Promise<Map<string, number>> {
+): Promise<SemanticSearchResult> {
   const scores = new Map<string, number>();
   try {
     const embedding = await generateEmbedding(ai, query);
@@ -26,10 +31,11 @@ export async function semanticSearch(
         }
       }
     }
+    return { scores, degraded: false };
   } catch (error) {
     console.error("Semantic search failed:", error);
+    return { scores, degraded: true };
   }
-  return scores;
 }
 
 export async function upsertSectionEmbeddings(

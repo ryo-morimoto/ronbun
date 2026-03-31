@@ -30,12 +30,14 @@ vi.mock("@ronbun/arxiv", async (importOriginal) => {
         </section>
       </body></html>`,
     ),
+    fetchArxivNativeHtml: vi.fn().mockResolvedValue(null),
     fetchArxivPdf: vi.fn().mockResolvedValue(null),
+    extractPdfText: vi.fn().mockResolvedValue(""),
   };
 });
 
 const { ingestPaper, processQueueMessage } = await import("@ronbun/api");
-const { fetchArxivMetadata, fetchArxivHtml } = await import("@ronbun/arxiv");
+const { fetchArxivMetadata, fetchArxivHtml, fetchArxivNativeHtml } = await import("@ronbun/arxiv");
 
 function createMockQueue() {
   const messages: QueueMessage[] = [];
@@ -272,6 +274,7 @@ describe("Paper Ingestion Pipeline", () => {
 
     it("throws when both HTML and PDF fail without marking failed", async () => {
       vi.mocked(fetchArxivHtml).mockResolvedValueOnce(null);
+      vi.mocked(fetchArxivNativeHtml).mockResolvedValueOnce(null);
 
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'metadata', ?)",

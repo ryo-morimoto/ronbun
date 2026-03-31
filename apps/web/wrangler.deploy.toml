@@ -42,7 +42,7 @@ binding = "INGEST_DLQ"
 queue = "ronbun-ingest-dlq"
 
 [env.production.triggers]
-crons = ["0 8 * * *"]
+crons = ["0 3 * * 1-5"]
 
 [env.preview]
 

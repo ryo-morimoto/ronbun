@@ -1,5 +1,5 @@
 import type { RonbunContext } from "./context.ts";
-import type { PaperRow, SectionRow, ExtractionRow, CitationRow } from "@ronbun/types";
+import type { ParsedPaper, SectionRow, ExtractionRow, CitationRow } from "@ronbun/types";
 import { getPaperInput, listPapersInput, findRelatedInput } from "@ronbun/schemas";
 import {
   getPaperById,
@@ -13,7 +13,7 @@ import {
 } from "@ronbun/database";
 
 export type PaperDetail = {
-  paper: PaperRow & { authors: string[]; categories: string[] };
+  paper: ParsedPaper;
   sections: SectionRow[];
   extractions: ExtractionRow[];
   citations: CitationRow[];
@@ -49,7 +49,7 @@ export async function getPaper(ctx: RonbunContext, input: unknown): Promise<Pape
 }
 
 export type PaperListResult = {
-  papers: Array<PaperRow & { authors: string[]; categories: string[] }>;
+  papers: ParsedPaper[];
   cursor: string | null;
   hasMore: boolean;
 };

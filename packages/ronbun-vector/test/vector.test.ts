@@ -37,22 +37,24 @@ describe("semanticSearch", () => {
   it("returns paperId to rank map", async () => {
     const ai = createMockAi();
     const vectorIndex = createMockVectorIndex();
-    const scores = await semanticSearch(vectorIndex, ai, "test query", 10);
+    const result = await semanticSearch(vectorIndex, ai, "test query", 10);
 
-    expect(scores.size).toBe(2); // paper-1 and paper-2 (deduplicated)
-    expect(scores.get("paper-1")).toBe(0);
-    expect(scores.get("paper-2")).toBe(1);
+    expect(result.scores.size).toBe(2); // paper-1 and paper-2 (deduplicated)
+    expect(result.scores.get("paper-1")).toBe(0);
+    expect(result.scores.get("paper-2")).toBe(1);
+    expect(result.degraded).toBe(false);
     expect(vectorIndex.query).toHaveBeenCalledWith([0.1, 0.2, 0.3, 0.4, 0.5], {
       topK: 10,
       returnMetadata: "all",
     });
   });
 
-  it("returns empty map on error", async () => {
+  it("returns empty map and degraded flag on error", async () => {
     const ai = { run: vi.fn().mockRejectedValue(new Error("AI failed")) } as unknown as Ai;
     const vectorIndex = createMockVectorIndex();
-    const scores = await semanticSearch(vectorIndex, ai, "test", 10);
-    expect(scores.size).toBe(0);
+    const result = await semanticSearch(vectorIndex, ai, "test", 10);
+    expect(result.scores.size).toBe(0);
+    expect(result.degraded).toBe(true);
   });
 
   it("falls back to match.id when metadata.paperId is missing", async () => {
@@ -63,8 +65,9 @@ describe("semanticSearch", () => {
       }),
     } as unknown as VectorizeIndex;
 
-    const scores = await semanticSearch(vectorIndex, ai, "test", 5);
-    expect(scores.get("sec-1")).toBe(0);
+    const result = await semanticSearch(vectorIndex, ai, "test", 5);
+    expect(result.scores.get("sec-1")).toBe(0);
+    expect(result.degraded).toBe(false);
   });
 });
 

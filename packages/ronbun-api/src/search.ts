@@ -6,6 +6,7 @@ import {
   searchSectionsFts,
   fetchPapersByIds,
   searchExtractionsFts,
+  getCitationCounts,
 } from "@ronbun/database";
 import { semanticSearch } from "@ronbun/vector";
 
@@ -13,9 +14,9 @@ export type SearchResult = {
   id: string;
   arxivId: string;
   title: string;
-  authors: string;
+  authors: string[];
   abstract: string;
-  categories: string;
+  categories: string[];
   publishedAt: string;
   score: number;
 };
@@ -48,7 +49,7 @@ function mergeWithRRF(
 export async function searchPapers(
   ctx: RonbunContext,
   input: unknown,
-): Promise<{ papers: SearchResult[] }> {
+): Promise<{ papers: SearchResult[]; searchMode: "hybrid" | "fts-only" }> {
   const validated = searchPapersInput.parse(input);
   const { query, category, yearFrom, yearTo, limit } = validated;
 
@@ -98,7 +99,12 @@ export async function searchPapers(
   }
 
   // 3. Semantic search
-  const vectorScores = await semanticSearch(ctx.vectorIndex, ctx.ai, query, limit * 2);
+  const { scores: vectorScores, degraded: searchDegraded } = await semanticSearch(
+    ctx.vectorIndex,
+    ctx.ai,
+    query,
+    limit * 2,
+  );
 
   // 4. RRF merge
   const rrfScores = mergeWithRRF(ftsScores, vectorScores);
@@ -112,7 +118,16 @@ export async function searchPapers(
     }
   }
 
-  // 6. Build results
+  // 6. Citation authority boost
+  const allCandidateIds = Array.from(rrfScores.keys());
+  const citationCounts = await getCitationCounts(ctx.db, allCandidateIds);
+  for (const [paperId, rrfScore] of rrfScores) {
+    const citations = citationCounts.get(paperId) ?? 0;
+    // log1p dampens the effect: 1 citation ≈ +0.011, 10 ≈ +0.038, 100 ≈ +0.077
+    rrfScores.set(paperId, rrfScore + Math.log1p(citations) / 30);
+  }
+
+  // 7. Build results
   const results: SearchResult[] = [];
   const sorted = Array.from(rrfScores.entries()).sort((a, b) => b[1] - a[1]);
 
@@ -130,16 +145,16 @@ export async function searchPapers(
       id: paper.id,
       arxivId: paper.arxiv_id,
       title: paper.title || "",
-      authors: paper.authors || "",
+      authors: parseJsonArray(paper.authors),
       abstract: paper.abstract || "",
-      categories: paper.categories || "",
+      categories: parseJsonArray(paper.categories),
       publishedAt: paper.published_at || "",
       score,
     });
     if (results.length >= limit) break;
   }
 
-  return { papers: results };
+  return { papers: results, searchMode: searchDegraded ? "fts-only" : "hybrid" };
 }
 
 export async function searchExtractions(
@@ -162,4 +177,15 @@ export async function searchExtractions(
   }));
 
   return { extractions: results };
+}
+
+function parseJsonArray(value: string | null | undefined): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
