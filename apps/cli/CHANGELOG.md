@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0](https://github.com/ryo-morimoto/ronbun/compare/cli-v0.3.0...cli-v1.0.0) (2026-03-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** The `extractions` CLI command has been removed. The `show` and `search` commands no longer offer paper ingestion prompts. Paper ingestion is now handled exclusively by the cron job.
+
+### Features
+
+* **cli:** remove extractions command and mutation operations ([c6b4842](https://github.com/ryo-morimoto/ronbun/commit/c6b4842049aeb0edf476df0c96ef12d7bce0c01c))
+* **cli:** simplify CLI to read-only operations ([89336ee](https://github.com/ryo-morimoto/ronbun/commit/89336ee3690cd7f42b995ce2b2551b80b24b5887))
+
 ## [0.3.0](https://github.com/ryo-morimoto/ronbun/compare/cli-v0.2.0...cli-v0.3.0) (2026-02-06)
 
 
