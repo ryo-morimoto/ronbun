@@ -1,15 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
-import {
-  ingestPaper,
-  batchIngest,
-  searchPapers,
-  searchExtractions,
-  getPaper,
-  listPapers,
-  findRelated,
-} from "@ronbun/api";
+import { searchPapers, searchExtractions, getPaper, listPapers, findRelated } from "@ronbun/api";
 import { createRonbunContext } from "../context";
 
 function mcpResult(data: unknown) {
@@ -24,48 +16,6 @@ function createMcpServer(env: Env): McpServer {
     name: "ronbun",
     version: "0.1.0",
   });
-
-  server.registerTool(
-    "ingest_paper",
-    {
-      title: "Ingest Paper",
-      description:
-        "Ingest a single arxiv paper by its ID. The paper will be queued for async processing.",
-      inputSchema: {
-        arxivId: z.string().describe("The arxiv paper ID (e.g. 2401.15884)"),
-      },
-    },
-    async ({ arxivId }) => {
-      try {
-        return mcpResult(await ingestPaper(ctx, { arxivId }));
-      } catch (error) {
-        return mcpResult({ error: error instanceof Error ? error.message : String(error) });
-      }
-    },
-  );
-
-  server.registerTool(
-    "batch_ingest",
-    {
-      title: "Batch Ingest Papers",
-      description:
-        "Ingest multiple papers at once. Provide either a list of arxiv IDs or a search query.",
-      inputSchema: {
-        arxivIds: z.array(z.string()).optional().describe("List of arxiv IDs to ingest"),
-        searchQuery: z
-          .string()
-          .optional()
-          .describe("Search query to find and ingest papers from arxiv"),
-      },
-    },
-    async ({ arxivIds, searchQuery }) => {
-      try {
-        return mcpResult(await batchIngest(ctx, { arxivIds, searchQuery }));
-      } catch (error) {
-        return mcpResult({ error: error instanceof Error ? error.message : String(error) });
-      }
-    },
-  );
 
   server.registerTool(
     "search_papers",

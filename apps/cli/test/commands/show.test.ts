@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockResponse, mockResponseError, captureConsole } from "./helpers.ts";
 
-// Mock modules
 vi.mock("../../src/lib/client.ts", () => ({
   createClient: vi.fn(),
   hasApiToken: vi.fn(() => true),
@@ -15,13 +14,7 @@ vi.mock("../../src/lib/client.ts", () => ({
   }),
 }));
 
-vi.mock("../../src/lib/prompt.ts", () => ({
-  confirmPrompt: vi.fn().mockResolvedValue(false),
-  selectPrompt: vi.fn().mockResolvedValue("skip"),
-}));
-
-import { createClient, hasApiToken } from "../../src/lib/client.ts";
-import { confirmPrompt } from "../../src/lib/prompt.ts";
+import { createClient } from "../../src/lib/client.ts";
 
 const readyPaperData = {
   paper: {
@@ -51,10 +44,7 @@ describe("show command", () => {
         papers: {
           ":id": {
             $get: vi.fn(),
-            status: { $get: vi.fn() },
-            related: { $get: vi.fn() },
           },
-          ingest: { $post: vi.fn() },
         },
         arxiv: {
           ":arxivId": {
@@ -80,7 +70,7 @@ describe("show command", () => {
     expect(output.logs.some((l: string) => l.includes("Test Paper Title"))).toBe(true);
   });
 
-  it("shows failed paper and offers re-ingest", async () => {
+  it("shows failed paper with retry message", async () => {
     const failedData = {
       paper: { ...readyPaperData.paper, status: "failed" },
       sections: [],
@@ -93,21 +83,10 @@ describe("show command", () => {
     const showCommand = (await import("../../src/commands/show.ts")).default;
     await showCommand.run!({ args: { id: "2401.15884" } } as any);
 
-    // confirmPrompt should have been called
-    expect(confirmPrompt).toHaveBeenCalled();
+    expect(output.logs.some((l: string) => l.includes("retried automatically"))).toBe(true);
   });
 
-  it("handles 404 for arXiv ID by offering fetch", async () => {
-    mockClient.api.papers[":id"].$get.mockResolvedValue(mockResponseError(404));
-
-    const showCommand = (await import("../../src/commands/show.ts")).default;
-    await showCommand.run!({ args: { id: "2401.15884" } } as any);
-
-    // confirmPrompt asked for fetch
-    expect(confirmPrompt).toHaveBeenCalled();
-  });
-
-  it("shows preview without ingest when token is missing", async () => {
+  it("handles 404 for arXiv ID by showing preview", async () => {
     mockClient.api.papers[":id"].$get.mockResolvedValue(mockResponseError(404));
     mockClient.api.arxiv[":arxivId"].preview.$get.mockResolvedValue(
       mockResponse({
@@ -118,13 +97,10 @@ describe("show command", () => {
         bodyText: null,
       }),
     );
-    vi.mocked(confirmPrompt).mockResolvedValue(true);
-    vi.mocked(hasApiToken).mockReturnValue(false);
 
     const showCommand = (await import("../../src/commands/show.ts")).default;
     await showCommand.run!({ args: { id: "2401.15884" } } as any);
 
-    expect(mockClient.api.papers.ingest.$post).not.toHaveBeenCalled();
-    expect(output.logs.some((l: string) => l.includes("Credentials are required"))).toBe(true);
+    expect(output.logs.some((l: string) => l.includes("not ingested yet"))).toBe(true);
   });
 });

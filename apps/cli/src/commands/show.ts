@@ -1,7 +1,6 @@
 import { defineCommand } from "citty";
-import { createClient, handleResponse, hasApiToken, requireApiToken } from "../lib/client.ts";
+import { createClient, handleResponse } from "../lib/client.ts";
 import { formatDetail, formatPreview } from "../lib/format.ts";
-import { confirmPrompt } from "../lib/prompt.ts";
 import { red, dim } from "../lib/ansi.ts";
 import { isArxivId, stripVersion } from "../lib/arxiv-id.ts";
 
@@ -22,12 +21,10 @@ export default defineCommand({
       const client = createClient();
       let id = args.id as string;
 
-      // Strip version if arXiv ID
       if (isArxivId(id)) {
         id = stripVersion(id);
       }
 
-      // Try to fetch from local database
       const res = await client.api.papers[":id"].$get({
         param: { id },
       });
@@ -35,27 +32,14 @@ export default defineCommand({
       if (res.ok) {
         const data = await handleResponse<any>(res);
 
-        // Handle failed status
         if (data.paper?.status === "failed") {
           console.log(formatDetail(data));
           console.log("");
-          const shouldReingest = await confirmPrompt("Paper ingestion failed. Re-ingest?");
-          if (shouldReingest) {
-            requireApiToken("paper re-ingestion");
-            const ingestRes = await client.api.papers.ingest.$post({
-              json: { arxivId: id },
-            });
-            await handleResponse<{ paperId: string }>(ingestRes);
-            console.log("");
-            console.log("  Re-ingestion queued. Check status with 'ronbun status <id>'.");
-            console.log("");
-          } else {
-            console.log("");
-          }
+          console.log(`  ${dim("Paper ingestion failed. It will be retried automatically.")}`);
+          console.log("");
           return;
         }
 
-        // Handle not-ready status
         if (data.paper?.status !== "ready") {
           console.log(formatDetail(data));
           console.log("");
@@ -66,47 +50,25 @@ export default defineCommand({
           return;
         }
 
-        // Ready - show full details
         console.log(formatDetail(data));
         console.log("");
         return;
       }
 
-      // 404 - check if it's an arXiv ID and offer to fetch
       if (res.status === 404 && isArxivId(id)) {
-        const shouldFetch = await confirmPrompt("Paper not found locally. Fetch from arXiv?");
-        if (!shouldFetch) {
-          console.log("");
-          return;
-        }
-
         const previewRes = await client.api.arxiv[":arxivId"].preview.$get({
           param: { arxivId: id },
         });
         const preview = await handleResponse<any>(previewRes);
         console.log(formatPreview(preview));
         console.log("");
-
-        if (!hasApiToken()) {
-          console.log(`  ${dim("Credentials are required. This feature is not available yet.")}`);
-          console.log("");
-          return;
-        }
-
-        requireApiToken("paper ingestion");
-        const ingestRes = await client.api.papers.ingest.$post({
-          json: { arxivId: id },
-        });
-        await handleResponse<{ paperId: string }>(ingestRes);
-
         console.log(
-          `  ${dim("Ingesting in background. Check status with 'ronbun status " + id + "'.")}`,
+          `  ${dim("Paper not ingested yet. It will be available after the next cron run.")}`,
         );
         console.log("");
         return;
       }
 
-      // Other error
       await handleResponse<any>(res);
     } catch (err) {
       console.error(`  ${red(`✗ ${err instanceof Error ? err.message : String(err)}`)}`);
