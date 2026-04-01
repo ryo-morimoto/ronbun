@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod";
 import papers from "./papers";
-import extractions from "./extractions";
 import arxiv from "./arxiv";
 import { createRateLimit } from "../middleware/rate-limit";
 
@@ -17,7 +16,6 @@ const api = new Hono<{ Bindings: Env }>()
   )
   .get("/health", (c) => c.json({ status: "ok" }))
   .route("/papers", papers)
-  .route("/extractions", extractions)
   .route("/arxiv", arxiv);
 
 const app = new Hono<{ Bindings: Env }>().route("/api", api).onError((err, c) => {

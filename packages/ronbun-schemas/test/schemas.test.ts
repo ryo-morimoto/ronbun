@@ -7,7 +7,6 @@ import {
   getPaperInput,
   listPapersInput,
   findRelatedInput,
-  searchExtractionsInput,
   queueMessageSchema,
 } from "../src/index.ts";
 
@@ -149,28 +148,9 @@ describe("findRelatedInput", () => {
   it("accepts linkTypes filter", () => {
     const result = findRelatedInput.parse({
       paperId: "abc",
-      linkTypes: ["citation", "shared_method"],
+      linkTypes: ["citation", "shared_author"],
     });
     expect(result.linkTypes).toHaveLength(2);
-  });
-});
-
-describe("searchExtractionsInput", () => {
-  it("accepts query with defaults", () => {
-    const result = searchExtractionsInput.parse({ query: "BERT" });
-    expect(result.limit).toBe(20);
-  });
-
-  it("accepts type filter", () => {
-    const result = searchExtractionsInput.parse({
-      query: "ImageNet",
-      type: "dataset",
-    });
-    expect(result.type).toBe("dataset");
-  });
-
-  it("rejects invalid type", () => {
-    expect(() => searchExtractionsInput.parse({ query: "test", type: "invalid" })).toThrow();
   });
 });
 
@@ -185,7 +165,7 @@ describe("queueMessageSchema", () => {
   });
 
   it("accepts all steps", () => {
-    for (const step of ["metadata", "content", "extraction", "embedding"]) {
+    for (const step of ["metadata", "content"]) {
       const result = queueMessageSchema.parse({
         paperId: "abc",
         arxivId: "2401.15884",

@@ -25,6 +25,25 @@ export async function fetchArxivHtml(arxivId: string): Promise<string | null> {
   return res.text();
 }
 
+export async function fetchArxivNativeHtml(arxivId: string): Promise<string | null> {
+  const url = `https://arxiv.org/html/${arxivId}`;
+  const res = await fetch(url, { redirect: "follow" });
+  if (!res.ok) return null;
+  const ct = res.headers.get("content-type") || "";
+  if (!ct.includes("text/html")) return null;
+  return res.text();
+}
+
+export async function extractPdfText(pdfBuffer: ArrayBuffer): Promise<string> {
+  const { WasmPdfDocument } = await import("pdf-oxide-wasm");
+  const doc = new WasmPdfDocument(new Uint8Array(pdfBuffer));
+  try {
+    return doc.extractAllText();
+  } finally {
+    doc.free();
+  }
+}
+
 export async function fetchArxivPdf(arxivId: string): Promise<ArrayBuffer | null> {
   const url = `https://arxiv.org/pdf/${arxivId}`;
   const res = await fetch(url, { redirect: "follow" });

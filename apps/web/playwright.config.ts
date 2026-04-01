@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "bun run build && bunx wrangler dev --port 8787",
+    command: "bun run build && bunx wrangler dev --config wrangler.deploy.toml --port 8787",
     url: "http://localhost:8787",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

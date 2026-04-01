@@ -1,4 +1,4 @@
-export type PaperStatus = "queued" | "metadata" | "parsed" | "extracted" | "ready" | "failed";
+export type PaperStatus = "queued" | "metadata" | "parsed" | "ready" | "failed";
 
 export type PaperRow = {
   id: string;
@@ -15,6 +15,11 @@ export type PaperRow = {
   ingested_at: string | null;
 };
 
+export type ParsedPaper = Omit<PaperRow, "authors" | "categories"> & {
+  authors: string[];
+  categories: string[];
+};
+
 export type SectionRow = {
   id: string;
   paper_id: string;
@@ -24,25 +29,6 @@ export type SectionRow = {
   position: number;
   created_at: string;
 };
-
-export type ExtractionRow = {
-  id: string;
-  paper_id: string;
-  type: ExtractionType;
-  name: string;
-  detail: string | null;
-  section_id: string | null;
-  created_at: string;
-};
-
-export type ExtractionType =
-  | "method"
-  | "dataset"
-  | "baseline"
-  | "metric"
-  | "result"
-  | "contribution"
-  | "limitation";
 
 export type CitationRow = {
   id: string;
@@ -62,7 +48,7 @@ export type EntityLinkRow = {
   created_at: string;
 };
 
-export type QueueStep = "metadata" | "content" | "extraction" | "embedding";
+export type QueueStep = "metadata" | "content";
 
 export type QueueMessage = {
   paperId: string;

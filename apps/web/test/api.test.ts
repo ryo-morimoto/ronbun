@@ -187,9 +187,9 @@ describe("GET /api/papers/:id/related", () => {
     expect(body.relatedPapers).toBeDefined();
   });
 
-  it("filters by shared_method link type", async () => {
+  it("filters by shared_author link type", async () => {
     const res = await fetchApi(
-      "http://localhost/api/papers/paper-1/related?linkTypes=shared_method",
+      "http://localhost/api/papers/paper-1/related?linkTypes=shared_author",
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { relatedPapers: unknown[] };
@@ -244,33 +244,6 @@ describe("POST /api/papers/search", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { papers: unknown[] };
     expect(body.papers).toBeDefined();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// POST /api/extractions/search
-// ---------------------------------------------------------------------------
-describe("POST /api/extractions/search", () => {
-  it("searches extractions via FTS", async () => {
-    const res = await fetchApi("http://localhost/api/extractions/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: "CRAG" }),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { extractions: unknown[] };
-    expect(body.extractions).toBeDefined();
-  });
-
-  it("filters extractions by type", async () => {
-    const res = await fetchApi("http://localhost/api/extractions/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: "method", type: "method" }),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { extractions: unknown[] };
-    expect(body.extractions).toBeDefined();
   });
 });
 

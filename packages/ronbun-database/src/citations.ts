@@ -27,6 +27,30 @@ export async function getCitedBy(
   return result.results as any;
 }
 
+export async function getCitationCounts(
+  db: D1Database,
+  paperIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (paperIds.length === 0) return counts;
+
+  const placeholders = paperIds.map(() => "?").join(",");
+  const result = await db
+    .prepare(
+      `SELECT target_paper_id, COUNT(*) as count
+       FROM citations
+       WHERE target_paper_id IN (${placeholders})
+       GROUP BY target_paper_id`,
+    )
+    .bind(...paperIds)
+    .all<{ target_paper_id: string; count: number }>();
+
+  for (const row of result.results) {
+    counts.set(row.target_paper_id, row.count);
+  }
+  return counts;
+}
+
 export async function insertCitation(
   db: D1Database,
   id: string,

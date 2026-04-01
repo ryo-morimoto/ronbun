@@ -1,17 +1,13 @@
 name = "ronbun-web"
-main = "./src/server.ts"
+main = "./dist/server/index.js"
 compatibility_date = "2025-01-29"
 compatibility_flags = ["nodejs_compat"]
 
-# Local development/typegen configuration (source entrypoint).
-# Deployment uses wrangler.deploy.toml (built entrypoint).
+# Deployment configuration (build output entrypoint).
 
 [assets]
 directory = "./dist/client"
 
-# ============================================================
-# Production
-# ============================================================
 [env.production]
 
 [env.production.ai]
@@ -48,9 +44,6 @@ queue = "ronbun-ingest-dlq"
 [env.production.triggers]
 crons = ["0 3 * * 1-5"]
 
-# ============================================================
-# Preview
-# ============================================================
 [env.preview]
 
 [env.preview.ai]

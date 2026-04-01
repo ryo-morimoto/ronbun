@@ -10,12 +10,53 @@ export async function findPaperByArxivId(
     .first<Pick<PaperRow, "id" | "arxiv_id" | "status">>();
 }
 
+export async function findExistingArxivIds(
+  db: D1Database,
+  arxivIds: string[],
+): Promise<Set<string>> {
+  const existing = new Set<string>();
+  if (arxivIds.length === 0) return existing;
+
+  // D1 batch: split into chunks to avoid SQL variable limits
+  const chunkSize = 100;
+  for (let i = 0; i < arxivIds.length; i += chunkSize) {
+    const chunk = arxivIds.slice(i, i + chunkSize);
+    const placeholders = chunk.map(() => "?").join(",");
+    const result = await db
+      .prepare(`SELECT arxiv_id FROM papers WHERE arxiv_id IN (${placeholders})`)
+      .bind(...chunk)
+      .all<{ arxiv_id: string }>();
+    for (const row of result.results) {
+      existing.add(row.arxiv_id);
+    }
+  }
+  return existing;
+}
+
 export async function insertPaper(db: D1Database, id: string, arxivId: string): Promise<void> {
   const now = new Date().toISOString();
   await db
     .prepare("INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)")
     .bind(id, arxivId, now)
     .run();
+}
+
+export async function insertPapersBatch(
+  db: D1Database,
+  papers: Array<{ id: string; arxivId: string }>,
+): Promise<void> {
+  if (papers.length === 0) return;
+  const now = new Date().toISOString();
+  const chunkSize = 100;
+  for (let i = 0; i < papers.length; i += chunkSize) {
+    const chunk = papers.slice(i, i + chunkSize);
+    const stmts = chunk.map((p) =>
+      db
+        .prepare("INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)")
+        .bind(p.id, p.arxivId, now),
+    );
+    await db.batch(stmts);
+  }
 }
 
 export async function updatePaperMetadata(

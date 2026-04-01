@@ -10,5 +10,9 @@ export default defineConfig({
       "~": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
-  plugins: [cloudflare({ viteEnvironment: { name: "ssr" } }), tanstackStart(), react()],
+  plugins: [
+    cloudflare({ viteEnvironment: { name: "ssr" } }),
+    tanstackStart({ server: { entry: "server.ts" } }),
+    react(),
+  ],
 });

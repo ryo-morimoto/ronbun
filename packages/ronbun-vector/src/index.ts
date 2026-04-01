@@ -5,12 +5,17 @@ export async function generateEmbedding(ai: Ai, text: string): Promise<number[]>
   return (response as { data: number[][] }).data[0];
 }
 
+export type SemanticSearchResult = {
+  scores: Map<string, number>;
+  degraded: boolean;
+};
+
 export async function semanticSearch(
   vectorIndex: VectorizeIndex,
   ai: Ai,
   query: string,
   topK: number,
-): Promise<Map<string, number>> {
+): Promise<SemanticSearchResult> {
   const scores = new Map<string, number>();
   try {
     const embedding = await generateEmbedding(ai, query);
@@ -26,37 +31,25 @@ export async function semanticSearch(
         }
       }
     }
+    return { scores, degraded: false };
   } catch (error) {
     console.error("Semantic search failed:", error);
+    return { scores, degraded: true };
   }
-  return scores;
 }
 
-export async function upsertSectionEmbeddings(
+export async function upsertPaperEmbedding(
   vectorIndex: VectorizeIndex,
   ai: Ai,
   paperId: string,
-  sections: Array<{ id: string; heading: string; content: string }>,
-): Promise<number> {
-  const vectors: VectorizeVector[] = [];
-  for (const section of sections) {
-    try {
-      const values = await generateEmbedding(ai, section.content.slice(0, 8000));
-      vectors.push({
-        id: section.id,
-        values,
-        metadata: {
-          paperId,
-          sectionId: section.id,
-          heading: section.heading,
-        },
-      });
-    } catch (error) {
-      console.error("Embedding failed for section:", section.id, error);
-    }
-  }
-  if (vectors.length > 0) {
-    await vectorIndex.upsert(vectors);
-  }
-  return vectors.length;
+  abstract: string,
+): Promise<void> {
+  const values = await generateEmbedding(ai, abstract.slice(0, 8000));
+  await vectorIndex.upsert([
+    {
+      id: paperId,
+      values,
+      metadata: { paperId },
+    },
+  ]);
 }

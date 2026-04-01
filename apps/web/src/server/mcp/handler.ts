@@ -1,26 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
-import type { RonbunContext } from "@ronbun/api";
-import {
-  ingestPaper,
-  batchIngest,
-  searchPapers,
-  searchExtractions,
-  getPaper,
-  listPapers,
-  findRelated,
-} from "@ronbun/api";
-
-function createContext(env: Env): RonbunContext {
-  return {
-    db: env.DB,
-    storage: env.STORAGE,
-    vectorIndex: env.VECTOR_INDEX,
-    ai: env.AI,
-    queue: env.INGEST_QUEUE,
-  };
-}
+import { searchPapers, getPaper, listPapers, findRelated } from "@ronbun/api";
+import { createRonbunContext } from "../context";
 
 function mcpResult(data: unknown) {
   return {
@@ -29,53 +11,11 @@ function mcpResult(data: unknown) {
 }
 
 function createMcpServer(env: Env): McpServer {
-  const ctx = createContext(env);
+  const ctx = createRonbunContext(env);
   const server = new McpServer({
     name: "ronbun",
     version: "0.1.0",
   });
-
-  server.registerTool(
-    "ingest_paper",
-    {
-      title: "Ingest Paper",
-      description:
-        "Ingest a single arxiv paper by its ID. The paper will be queued for async processing.",
-      inputSchema: {
-        arxivId: z.string().describe("The arxiv paper ID (e.g. 2401.15884)"),
-      },
-    },
-    async ({ arxivId }) => {
-      try {
-        return mcpResult(await ingestPaper(ctx, { arxivId }));
-      } catch (error) {
-        return mcpResult({ error: error instanceof Error ? error.message : String(error) });
-      }
-    },
-  );
-
-  server.registerTool(
-    "batch_ingest",
-    {
-      title: "Batch Ingest Papers",
-      description:
-        "Ingest multiple papers at once. Provide either a list of arxiv IDs or a search query.",
-      inputSchema: {
-        arxivIds: z.array(z.string()).optional().describe("List of arxiv IDs to ingest"),
-        searchQuery: z
-          .string()
-          .optional()
-          .describe("Search query to find and ingest papers from arxiv"),
-      },
-    },
-    async ({ arxivIds, searchQuery }) => {
-      try {
-        return mcpResult(await batchIngest(ctx, { arxivIds, searchQuery }));
-      } catch (error) {
-        return mcpResult({ error: error instanceof Error ? error.message : String(error) });
-      }
-    },
-  );
 
   server.registerTool(
     "search_papers",
@@ -127,7 +67,7 @@ function createMcpServer(env: Env): McpServer {
         category: z.string().optional().describe("Filter by category"),
         year: z.number().optional().describe("Filter by year"),
         status: z
-          .enum(["queued", "metadata", "parsed", "extracted", "ready", "failed"])
+          .enum(["queued", "metadata", "parsed", "ready", "failed"])
           .optional()
           .describe("Filter by status"),
         sortBy: z.enum(["published_at", "created_at", "title"]).optional().describe("Sort field"),
@@ -153,9 +93,7 @@ function createMcpServer(env: Env): McpServer {
       inputSchema: {
         paperId: z.string().describe("Paper ID or arxiv ID"),
         linkTypes: z
-          .array(
-            z.enum(["citation", "cited_by", "shared_method", "shared_dataset", "shared_author"]),
-          )
+          .array(z.enum(["citation", "cited_by", "shared_author"]))
           .optional()
           .describe("Filter by relationship types"),
         limit: z.number().optional().describe("Max results"),
@@ -164,29 +102,6 @@ function createMcpServer(env: Env): McpServer {
     async (args) => {
       try {
         return mcpResult(await findRelated(ctx, args));
-      } catch (error) {
-        return mcpResult({ error: error instanceof Error ? error.message : String(error) });
-      }
-    },
-  );
-
-  server.registerTool(
-    "search_extractions",
-    {
-      title: "Search Extractions",
-      description: "Search extracted structured knowledge across all papers.",
-      inputSchema: {
-        query: z.string().describe("Search query"),
-        type: z
-          .enum(["method", "dataset", "baseline", "metric", "result", "contribution", "limitation"])
-          .optional()
-          .describe("Filter by type"),
-        limit: z.number().optional().describe("Max results"),
-      },
-    },
-    async (args) => {
-      try {
-        return mcpResult(await searchExtractions(ctx, args));
       } catch (error) {
         return mcpResult({ error: error instanceof Error ? error.message : String(error) });
       }

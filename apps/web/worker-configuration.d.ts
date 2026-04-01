@@ -12,5 +12,4 @@ interface Env {
 
   // Environment Variables (manually added)
   API_TOKEN: string;
-  ARXIV_CATEGORIES: string;
 }
