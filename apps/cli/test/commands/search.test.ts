@@ -3,20 +3,13 @@ import { mockResponse, captureConsole } from "./helpers.ts";
 
 vi.mock("../../src/lib/client.ts", () => ({
   createClient: vi.fn(),
-  hasApiToken: vi.fn(() => true),
-  requireApiToken: vi.fn(),
   handleResponse: vi.fn(async (res: any) => {
     if (res.ok) return res.json();
     throw new Error(`${res.status}`);
   }),
 }));
 
-vi.mock("../../src/lib/prompt.ts", () => ({
-  confirmPrompt: vi.fn().mockResolvedValue(false),
-  selectPrompt: vi.fn().mockResolvedValue("skip"),
-}));
-
-import { createClient, hasApiToken } from "../../src/lib/client.ts";
+import { createClient } from "../../src/lib/client.ts";
 
 describe("search command", () => {
   let output: ReturnType<typeof captureConsole>;
@@ -27,14 +20,6 @@ describe("search command", () => {
     mockClient = {
       api: {
         papers: {
-          search: {
-            $post: vi.fn(),
-          },
-          "batch-ingest": {
-            $post: vi.fn(),
-          },
-        },
-        arxiv: {
           search: {
             $post: vi.fn(),
           },
@@ -49,7 +34,7 @@ describe("search command", () => {
     vi.restoreAllMocks();
   });
 
-  it("displays local search results", async () => {
+  it("displays search results", async () => {
     mockClient.api.papers.search.$post.mockResolvedValue(
       mockResponse({
         papers: [
@@ -69,33 +54,31 @@ describe("search command", () => {
     expect(output.logs.some((l: string) => l.includes("Test Paper"))).toBe(true);
   });
 
-  it("offers arXiv fallback when no local results", async () => {
+  it("shows no results message when empty", async () => {
     mockClient.api.papers.search.$post.mockResolvedValue(mockResponse({ papers: [] }));
 
     const searchCommand = (await import("../../src/commands/search.ts")).default;
     await searchCommand.run!({ args: { query: "noresult", limit: "10" } } as any);
 
-    // confirmPrompt was called for arXiv fallback
-    const { confirmPrompt } = await import("../../src/lib/prompt.ts");
-    expect(confirmPrompt).toHaveBeenCalled();
+    expect(output.logs.some((l: string) => l.includes("No results found"))).toBe(true);
   });
 
-  it("shows credentials message instead of ingest prompt when token is missing", async () => {
+  it("passes filter parameters", async () => {
     mockClient.api.papers.search.$post.mockResolvedValue(mockResponse({ papers: [] }));
-    mockClient.api.arxiv.search.$post.mockResolvedValue(
-      mockResponse({
-        papers: [{ arxiv_id: "2401.15884", title: "Remote Paper", published_at: "2024-01-28" }],
-      }),
-    );
-    vi.mocked(hasApiToken).mockReturnValue(false);
-    const { confirmPrompt } = await import("../../src/lib/prompt.ts");
-    vi.mocked(confirmPrompt).mockResolvedValue(true);
 
     const searchCommand = (await import("../../src/commands/search.ts")).default;
-    await searchCommand.run!({ args: { query: "noresult", limit: "10" } } as any);
+    await searchCommand.run!({
+      args: { query: "test", category: "cs.AI", "year-from": "2024", limit: "5" },
+    } as any);
 
-    const { selectPrompt } = await import("../../src/lib/prompt.ts");
-    expect(selectPrompt).not.toHaveBeenCalled();
-    expect(output.logs.some((l: string) => l.includes("Credentials are required"))).toBe(true);
+    expect(mockClient.api.papers.search.$post).toHaveBeenCalledWith({
+      json: {
+        query: "test",
+        category: "cs.AI",
+        yearFrom: 2024,
+        yearTo: undefined,
+        limit: 5,
+      },
+    });
   });
 });

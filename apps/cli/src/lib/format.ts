@@ -49,11 +49,9 @@ export function formatDetail(paper: any): string {
   lines.push("  Abstract:");
   lines.push(`    ${p.abstract || "(none)"}`);
 
-  if (paper.sections && paper.extractions && paper.citations) {
+  if (paper.sections && paper.citations) {
     lines.push("");
-    lines.push(
-      `  Sections: ${paper.sections.length} · Extractions: ${paper.extractions.length} · Citations: ${paper.citations.length}`,
-    );
+    lines.push(`  Sections: ${paper.sections.length} · Citations: ${paper.citations.length}`);
   }
 
   return lines.join("\n");
