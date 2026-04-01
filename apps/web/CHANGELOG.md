@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/ryo-morimoto/ronbun/compare/web-v0.3.0...web-v0.4.0) (2026-04-01)
+
+
+### Features
+
+* **web:** overhaul ingestion pipeline and implement tiered processing ([6cd2112](https://github.com/ryo-morimoto/ronbun/commit/6cd2112ba5379480eab562d3e776656240382fa8))
+
 ## [0.3.0](https://github.com/ryo-morimoto/ronbun/compare/web-v0.2.0...web-v0.3.0) (2026-02-06)
 
 
