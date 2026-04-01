@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/ryo-morimoto/ronbun/compare/cli-v0.3.0...cli-v0.4.0) (2026-04-01)
+
+
+### Features
+
+* **cli:** simplify to read-only operations ([51b2528](https://github.com/ryo-morimoto/ronbun/commit/51b25280b1dc3fa1875264d980bdab85e05422bd))
+
 ## [0.3.0](https://github.com/ryo-morimoto/ronbun/compare/cli-v0.2.0...cli-v0.3.0) (2026-02-06)
 
 
