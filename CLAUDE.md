@@ -95,6 +95,7 @@ cd apps/cli && bun run dev       # Run CLI locally
 - Cron: OAI-PMH with arXiv prefix returns full metadata. No individual arXiv API calls
 - DO alarm scheduler (ArxivFetchScheduler): rate-controls content fetch at 3s intervals
 - Content step: fetch HTML/PDF (3-tier fallback: ar5iv → native HTML → pdf-oxide-wasm) + parse sections/citations + mark ready
+- ar5iv is a static dataset (not live), updated periodically. Recent papers fall through to arXiv native HTML or PDF
 - Hybrid search: FTS (title + abstract + sections) + Vector (abstract embedding) merged via RRF with citation authority boost
 - Bearer token auth on `/api/*` endpoints
 - REST routes use Hono method chaining for AppType inference (hono/client)

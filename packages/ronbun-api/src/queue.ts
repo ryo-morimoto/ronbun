@@ -28,14 +28,18 @@ export async function processContent(ctx: RonbunContext, message: QueueMessage):
 
   let parsedContent;
 
-  // Tier 1: ar5iv HTML (best quality, ~77% coverage)
+  // Tier 1: ar5iv HTML (best quality when available, ~77% of historical corpus)
+  // NOTE: ar5iv is NOT a live service — it's a static dataset updated periodically.
+  // As of 2026-04, sources cover up to end of February 2026.
+  // Recent papers will miss here and fall through to Tier 2/3.
   const htmlContent = await fetchArxivHtml(arxivId);
   if (htmlContent) {
     await storeHtml(ctx.storage, arxivId, htmlContent);
     parsedContent = parseHtmlContent(htmlContent);
   }
 
-  // Tier 2: arXiv native HTML (post-Dec 2023 papers)
+  // Tier 2: arXiv native HTML (experimental, post-Dec 2023 papers)
+  // This is the primary path for recent papers not yet in ar5iv.
   if (!parsedContent) {
     const nativeHtml = await fetchArxivNativeHtml(arxivId);
     if (nativeHtml) {
