@@ -1,6 +1,8 @@
 pre-commit:
   parallel: true
   commands:
+    gitleaks:
+      run: gitleaks protect --staged --no-banner
     format:
       run: bun run format:check
     lint:
@@ -9,3 +11,8 @@ pre-commit:
       run: bun run typecheck
     test:
       run: bun run test
+
+pre-push:
+  commands:
+    knip:
+      run: bunx knip

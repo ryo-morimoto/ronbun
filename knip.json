@@ -1,0 +1,30 @@
+{
+  "workspaces": {
+    ".": {},
+    "apps/web": {
+      "entry": [
+        "src/client.tsx",
+        "src/ssr.tsx",
+        "src/routes/**/*.tsx",
+        "src/server/**/*.ts",
+        "test/**/*.test.ts"
+      ],
+      "ignore": ["test/env.d.ts", "test/helper.ts"],
+      "ignoreDependencies": ["cloudflare"]
+    },
+    "apps/cli": {},
+    "packages/ronbun-types": {},
+    "packages/ronbun-schemas": {},
+    "packages/ronbun-arxiv": {},
+    "packages/ronbun-database": {
+      "ignore": ["test/env.d.ts"],
+      "ignoreDependencies": ["cloudflare"]
+    },
+    "packages/ronbun-storage": {
+      "ignore": ["test/env.d.ts"],
+      "ignoreDependencies": ["cloudflare"]
+    },
+    "packages/ronbun-vector": {},
+    "packages/ronbun-api": {}
+  }
+}
