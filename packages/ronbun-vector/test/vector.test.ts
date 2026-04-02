@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { generateEmbedding, semanticSearch, upsertPaperEmbedding } from "../src/index.ts";
+import {
+  generateEmbedding,
+  semanticSearch,
+  upsertPaperEmbedding,
+  batchEmbedPapers,
+} from "../src/index.ts";
 
 function createMockAi() {
   return {
@@ -84,5 +89,67 @@ describe("upsertPaperEmbedding", () => {
     expect(upsertCall).toHaveLength(1);
     expect(upsertCall[0].id).toBe("paper-1");
     expect(upsertCall[0].metadata).toEqual({ paperId: "paper-1" });
+  });
+});
+
+describe("batchEmbedPapers", () => {
+  it("embeds and upserts multiple papers, returns count", async () => {
+    const ai = {
+      run: vi.fn().mockResolvedValue({
+        data: [
+          [0.1, 0.2],
+          [0.3, 0.4],
+        ],
+      }),
+    } as unknown as Ai;
+    const vectorIndex = createMockVectorIndex();
+
+    const papers = [
+      { id: "batch-1", abstract: "Abstract one" },
+      { id: "batch-2", abstract: "Abstract two" },
+    ];
+
+    const count = await batchEmbedPapers(vectorIndex, ai, papers);
+
+    expect(count).toBe(2);
+    expect(ai.run).toHaveBeenCalledTimes(1);
+    expect(vectorIndex.upsert).toHaveBeenCalledTimes(1);
+
+    const upsertCall = (vectorIndex.upsert as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(upsertCall).toHaveLength(2);
+    expect(upsertCall[0].id).toBe("batch-1");
+    expect(upsertCall[0].metadata).toEqual({ paperId: "batch-1" });
+    expect(upsertCall[1].id).toBe("batch-2");
+  });
+
+  it("returns 0 for empty input", async () => {
+    const ai = createMockAi();
+    const vectorIndex = createMockVectorIndex();
+
+    const count = await batchEmbedPapers(vectorIndex, ai, []);
+
+    expect(count).toBe(0);
+    expect(ai.run).not.toHaveBeenCalled();
+    expect(vectorIndex.upsert).not.toHaveBeenCalled();
+  });
+
+  it("skips failed batches and continues", async () => {
+    const ai = {
+      run: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("AI failed"))
+        .mockResolvedValueOnce({ data: [[0.5, 0.6]] }),
+    } as unknown as Ai;
+    const vectorIndex = createMockVectorIndex();
+
+    // With EMBED_BATCH_SIZE=50, 51 papers = 2 batches; first fails, second succeeds
+    const papers = Array.from({ length: 51 }, (_, i) => ({
+      id: `batch-skip-${i}`,
+      abstract: `Abstract ${i}`,
+    }));
+
+    const count = await batchEmbedPapers(vectorIndex, ai, papers);
+    // First batch of 50 failed, second batch of 1 succeeded
+    expect(count).toBe(1);
   });
 });

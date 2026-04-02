@@ -3,73 +3,111 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { applyMigration } from "./helper.ts";
 import {
   findPaperByArxivId,
-  insertPaper,
-  updatePaperMetadata,
-  updatePaperStatus,
+  findExistingArxivIds,
+  insertPapersWithMetadataBatch,
   markPaperReady,
   markPaperFailed,
   getPaperById,
-  getPaperArxivId,
   listPapers,
   searchPapersFts,
   searchSectionsFts,
   fetchPapersByIds,
 } from "../src/papers.ts";
+import type { PaperInsert } from "../src/papers.ts";
+
+function makePaperInsert(
+  overrides: Partial<PaperInsert> & { id: string; arxivId: string },
+): PaperInsert {
+  return {
+    title: "Test Paper",
+    authors: ["Author A"],
+    abstract: "Test abstract.",
+    categories: ["cs.AI"],
+    publishedAt: "2024-01-15T00:00:00Z",
+    updatedAt: "2024-01-16T00:00:00Z",
+    ...overrides,
+  };
+}
 
 beforeAll(async () => {
   await applyMigration(env.DB);
 });
 
 describe("papers", () => {
-  describe("insertPaper + findPaperByArxivId", () => {
-    it("inserts a paper and finds it by arxiv_id", async () => {
-      await insertPaper(env.DB, "p-1", "2401.00001");
+  describe("insertPapersWithMetadataBatch + findPaperByArxivId", () => {
+    it("inserts papers with metadata status and finds them by arxiv_id", async () => {
+      await insertPapersWithMetadataBatch(env.DB, [
+        makePaperInsert({ id: "p-1", arxivId: "2401.00001" }),
+      ]);
+
       const found = await findPaperByArxivId(env.DB, "2401.00001");
       expect(found).not.toBeNull();
       expect(found!.id).toBe("p-1");
       expect(found!.arxiv_id).toBe("2401.00001");
-      expect(found!.status).toBe("queued");
+      expect(found!.status).toBe("metadata");
     });
 
     it("returns null for non-existent arxiv_id", async () => {
       const found = await findPaperByArxivId(env.DB, "9999.99999");
       expect(found).toBeNull();
     });
-  });
 
-  describe("updatePaperMetadata", () => {
-    it("updates metadata and sets status to metadata", async () => {
-      await insertPaper(env.DB, "p-meta", "2401.00002");
-      await updatePaperMetadata(env.DB, "p-meta", {
-        title: "Test Paper",
-        authors: ["Author A", "Author B"],
-        abstract: "An abstract.",
-        categories: ["cs.AI", "cs.CL"],
-        publishedAt: "2024-01-15T00:00:00Z",
-        updatedAt: "2024-01-16T00:00:00Z",
-      });
-      const paper = await getPaperById(env.DB, "p-meta");
-      expect(paper).not.toBeNull();
-      expect(paper!.title).toBe("Test Paper");
-      expect(paper!.authors).toBe('["Author A","Author B"]');
-      expect(paper!.abstract).toBe("An abstract.");
-      expect(paper!.categories).toBe('["cs.AI","cs.CL"]');
-      expect(paper!.status).toBe("metadata");
+    it("inserts author entity_links for each author", async () => {
+      await insertPapersWithMetadataBatch(env.DB, [
+        makePaperInsert({
+          id: "p-authors",
+          arxivId: "2401.00099",
+          authors: ["Author A", "Author B"],
+        }),
+      ]);
+
+      const links = await env.DB.prepare(
+        "SELECT * FROM entity_links WHERE paper_id = ? AND entity_type = 'author' ORDER BY entity_name",
+      )
+        .bind("p-authors")
+        .all();
+      expect(links.results.length).toBe(2);
+      const names = links.results.map((r) => r.entity_name);
+      expect(names).toContain("Author A");
+      expect(names).toContain("Author B");
+    });
+
+    it("inserts multiple papers in a single batch", async () => {
+      await insertPapersWithMetadataBatch(env.DB, [
+        makePaperInsert({ id: "p-batch-1", arxivId: "2402.00001" }),
+        makePaperInsert({ id: "p-batch-2", arxivId: "2402.00002" }),
+        makePaperInsert({ id: "p-batch-3", arxivId: "2402.00003" }),
+      ]);
+
+      const result = await env.DB.prepare(
+        "SELECT id FROM papers WHERE id IN ('p-batch-1', 'p-batch-2', 'p-batch-3')",
+      ).all();
+      expect(result.results.length).toBe(3);
     });
   });
 
-  describe("updatePaperStatus", () => {
-    it("updates status field", async () => {
-      await insertPaper(env.DB, "p-status", "2401.00003");
-      await updatePaperStatus(env.DB, "p-status", "parsed");
-      const paper = await getPaperById(env.DB, "p-status");
-      expect(paper!.status).toBe("parsed");
+  describe("findExistingArxivIds", () => {
+    it("returns a set of existing arxiv_ids", async () => {
+      await insertPapersWithMetadataBatch(env.DB, [
+        makePaperInsert({ id: "p-exist-1", arxivId: "2403.00001" }),
+      ]);
+
+      const existing = await findExistingArxivIds(env.DB, ["2403.00001", "9999.00000"]);
+      expect(existing.has("2403.00001")).toBe(true);
+      expect(existing.has("9999.00000")).toBe(false);
+    });
+
+    it("returns empty set for empty input", async () => {
+      const existing = await findExistingArxivIds(env.DB, []);
+      expect(existing.size).toBe(0);
     });
   });
 
   describe("markPaperReady", () => {
     it("sets status to ready and sets ingested_at", async () => {
-      await insertPaper(env.DB, "p-ready", "2401.00004");
+      await insertPapersWithMetadataBatch(env.DB, [
+        makePaperInsert({ id: "p-ready", arxivId: "2401.00004" }),
+      ]);
       await markPaperReady(env.DB, "p-ready");
       const paper = await getPaperById(env.DB, "p-ready");
       expect(paper!.status).toBe("ready");
@@ -79,7 +117,9 @@ describe("papers", () => {
 
   describe("markPaperFailed", () => {
     it("sets status to failed and records error", async () => {
-      await insertPaper(env.DB, "p-fail", "2401.00005");
+      await insertPapersWithMetadataBatch(env.DB, [
+        makePaperInsert({ id: "p-fail", arxivId: "2401.00005" }),
+      ]);
       await markPaperFailed(env.DB, "p-fail", new Error("fetch error"));
       const paper = await getPaperById(env.DB, "p-fail");
       expect(paper!.status).toBe("failed");
@@ -89,14 +129,18 @@ describe("papers", () => {
 
   describe("getPaperById", () => {
     it("finds by id", async () => {
-      await insertPaper(env.DB, "p-byid", "2401.00006");
+      await insertPapersWithMetadataBatch(env.DB, [
+        makePaperInsert({ id: "p-byid", arxivId: "2401.00006" }),
+      ]);
       const paper = await getPaperById(env.DB, "p-byid");
       expect(paper).not.toBeNull();
       expect(paper!.id).toBe("p-byid");
     });
 
     it("finds by arxiv_id", async () => {
-      await insertPaper(env.DB, "p-byid2", "2401.00006v2");
+      await insertPapersWithMetadataBatch(env.DB, [
+        makePaperInsert({ id: "p-byid2", arxivId: "2401.00006v2" }),
+      ]);
       const paper = await getPaperById(env.DB, "2401.00006v2");
       expect(paper).not.toBeNull();
       expect(paper!.arxiv_id).toBe("2401.00006v2");
@@ -105,19 +149,6 @@ describe("papers", () => {
     it("returns null for non-existent", async () => {
       const paper = await getPaperById(env.DB, "does-not-exist");
       expect(paper).toBeNull();
-    });
-  });
-
-  describe("getPaperArxivId", () => {
-    it("returns arxiv_id for existing paper", async () => {
-      await insertPaper(env.DB, "p-arxiv", "2401.00007");
-      const arxivId = await getPaperArxivId(env.DB, "p-arxiv");
-      expect(arxivId).toBe("2401.00007");
-    });
-
-    it("returns null for non-existent paper", async () => {
-      const arxivId = await getPaperArxivId(env.DB, "no-such-id");
-      expect(arxivId).toBeNull();
     });
   });
 
@@ -332,7 +363,7 @@ describe("papers", () => {
     });
 
     it("excludes non-ready papers", async () => {
-      const results = await fetchPapersByIds(env.DB, ["p-1"]); // p-1 is queued
+      const results = await fetchPapersByIds(env.DB, ["p-1"]); // p-1 is metadata
       expect(results.length).toBe(0);
     });
   });

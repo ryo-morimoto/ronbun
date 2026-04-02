@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   startFetch: vi.fn(),
   handleApiRequest: vi.fn(),
   handleMcpRequest: vi.fn(),
-  processQueueMessage: vi.fn(),
+  processContent: vi.fn(),
   updatePaperError: vi.fn(),
   markPaperFailed: vi.fn(),
   handleScheduled: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock("../src/server/mcp/handler", () => ({
 }));
 
 vi.mock("@ronbun/api", () => ({
-  processQueueMessage: mocks.processQueueMessage,
+  processContent: mocks.processContent,
 }));
 
 vi.mock("@ronbun/database", () => ({
@@ -61,7 +61,6 @@ function createQueueBatch(attempts = 1) {
     body: {
       paperId: "paper-1",
       arxivId: "2401.15884",
-      step: "metadata",
     },
     attempts,
     ack: vi.fn(),
@@ -88,7 +87,7 @@ beforeEach(() => {
   mocks.startFetch.mockResolvedValue(new Response("start"));
   mocks.handleApiRequest.mockResolvedValue(null);
   mocks.handleMcpRequest.mockResolvedValue(new Response("mcp"));
-  mocks.processQueueMessage.mockResolvedValue(undefined);
+  mocks.processContent.mockResolvedValue(undefined);
   mocks.updatePaperError.mockResolvedValue(undefined);
   mocks.markPaperFailed.mockResolvedValue(undefined);
   mocks.handleScheduled.mockResolvedValue(undefined);
@@ -167,7 +166,7 @@ describe("queue and scheduled handlers", () => {
 
     await worker.queue(batch as unknown as MessageBatch<unknown>, env);
 
-    expect(mocks.processQueueMessage).toHaveBeenCalledWith(
+    expect(mocks.processContent).toHaveBeenCalledWith(
       expect.objectContaining({
         db: env.DB,
         storage: env.STORAGE,
@@ -184,7 +183,7 @@ describe("queue and scheduled handlers", () => {
   it("updates error and retries when queue processing fails below max retries", async () => {
     const env = createRuntimeEnv();
     const { batch, message } = createQueueBatch(1);
-    mocks.processQueueMessage.mockRejectedValueOnce(new Error("processing failed"));
+    mocks.processContent.mockRejectedValueOnce(new Error("processing failed"));
 
     await worker.queue(batch as unknown as MessageBatch<unknown>, env);
 
@@ -201,7 +200,7 @@ describe("queue and scheduled handlers", () => {
   it("marks paper failed when queue processing exceeds max retries", async () => {
     const env = createRuntimeEnv();
     const { batch, message } = createQueueBatch(3);
-    mocks.processQueueMessage.mockRejectedValueOnce(new Error("processing failed"));
+    mocks.processContent.mockRejectedValueOnce(new Error("processing failed"));
 
     await worker.queue(batch as unknown as MessageBatch<unknown>, env);
 

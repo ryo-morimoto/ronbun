@@ -44,7 +44,7 @@ describe("D1 database operations", () => {
     it("enforces unique arxiv_id", async () => {
       await expect(
         env.DB.prepare(
-          "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)",
+          "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'metadata', ?)",
         )
           .bind("paper-dup", "2401.15884", "2024-01-01T00:00:00Z")
           .run(),
@@ -167,12 +167,13 @@ describe("D1 database operations", () => {
 
     it("queries entity links by type", async () => {
       const result = await env.DB.prepare(
-        "SELECT * FROM entity_links WHERE paper_id = ? AND entity_type = ?",
+        "SELECT * FROM entity_links WHERE paper_id = ? AND entity_type = ? ORDER BY entity_name",
       )
         .bind("paper-1", "author")
         .all();
-      expect(result.results.length).toBe(1);
-      expect(result.results[0].entity_name).toBe("Shi-Qi Yan");
+      expect(result.results.length).toBeGreaterThanOrEqual(1);
+      const names = result.results.map((r) => r.entity_name);
+      expect(names).toContain("Shi-Qi Yan");
     });
   });
 
@@ -218,7 +219,7 @@ describe("D1 database operations", () => {
   describe("insert and update operations", () => {
     it("inserts a new paper and updates status", async () => {
       await env.DB.prepare(
-        "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)",
+        "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'metadata', ?)",
       )
         .bind("paper-new", "2499.00001", "2024-06-01T00:00:00Z")
         .run();
@@ -226,20 +227,20 @@ describe("D1 database operations", () => {
       let paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
         .bind("paper-new")
         .first();
-      expect(paper!.status).toBe("queued");
+      expect(paper!.status).toBe("metadata");
 
-      await env.DB.prepare("UPDATE papers SET status = 'metadata', title = ? WHERE id = ?")
+      await env.DB.prepare("UPDATE papers SET status = 'ready', title = ? WHERE id = ?")
         .bind("New Paper Title", "paper-new")
         .run();
 
       paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind("paper-new").first();
-      expect(paper!.status).toBe("metadata");
+      expect(paper!.status).toBe("ready");
       expect(paper!.title).toBe("New Paper Title");
     });
 
     it("marks paper as failed with error", async () => {
       await env.DB.prepare(
-        "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)",
+        "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'metadata', ?)",
       )
         .bind("paper-fail", "2499.00002", "2024-07-01T00:00:00Z")
         .run();

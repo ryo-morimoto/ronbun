@@ -80,9 +80,7 @@ function PapersComponent() {
         >
           <option value="">All Statuses</option>
           <option value="ready">Ready</option>
-          <option value="queued">Queued</option>
           <option value="metadata">Metadata</option>
-          <option value="parsed">Parsed</option>
           <option value="failed">Failed</option>
         </select>
       </div>

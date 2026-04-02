@@ -1,13 +1,5 @@
 import { Hono } from "hono";
-import { bearerAuth } from "hono/bearer-auth";
-import {
-  searchPapers,
-  getPaper,
-  listPapers,
-  ingestPaper,
-  batchIngest,
-  findRelated,
-} from "@ronbun/api";
+import { searchPapers, getPaper, listPapers, findRelated } from "@ronbun/api";
 import { createRateLimit } from "../middleware/rate-limit";
 import { createRonbunContext } from "../context";
 
@@ -47,32 +39,6 @@ const papers = new Hono<{ Bindings: Env }>()
     if (!result) return c.json({ error: "Paper not found" }, 404);
     return c.json(result);
   })
-  .post(
-    "/ingest",
-    async (c, next) => {
-      const auth = bearerAuth({ verifyToken: (token) => token === c.env.API_TOKEN });
-      return auth(c, next);
-    },
-    async (c) => {
-      const body = await c.req.json();
-      const ctx = createRonbunContext(c.env);
-      const result = await ingestPaper(ctx, body);
-      return c.json(result);
-    },
-  )
-  .post(
-    "/batch-ingest",
-    async (c, next) => {
-      const auth = bearerAuth({ verifyToken: (token) => token === c.env.API_TOKEN });
-      return auth(c, next);
-    },
-    async (c) => {
-      const body = await c.req.json();
-      const ctx = createRonbunContext(c.env);
-      const result = await batchIngest(ctx, body);
-      return c.json(result);
-    },
-  )
   .get("/:id/related", async (c) => {
     const ctx = createRonbunContext(c.env);
     const id = c.req.param("id");

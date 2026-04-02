@@ -1,12 +1,27 @@
 import { env } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
 import { applyMigration } from "./helper.ts";
-import { insertPaper } from "../src/papers.ts";
+import { insertPapersWithMetadataBatch } from "../src/papers.ts";
 import { getSectionsByPaperId, insertSection, getSectionsForExtraction } from "../src/sections.ts";
+
+async function insertTestPaper(id: string, arxivId: string) {
+  await insertPapersWithMetadataBatch(env.DB, [
+    {
+      id,
+      arxivId,
+      title: "Test Paper",
+      authors: [],
+      abstract: "",
+      categories: [],
+      publishedAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+    },
+  ]);
+}
 
 beforeAll(async () => {
   await applyMigration(env.DB);
-  await insertPaper(env.DB, "sp-1", "2601.00001");
+  await insertTestPaper("sp-1", "2601.00001");
 });
 
 describe("sections", () => {
@@ -25,7 +40,7 @@ describe("sections", () => {
     });
 
     it("returns empty for paper with no sections", async () => {
-      await insertPaper(env.DB, "sp-empty", "2601.00002");
+      await insertTestPaper("sp-empty", "2601.00002");
       const sections = await getSectionsByPaperId(env.DB, "sp-empty");
       expect(sections.length).toBe(0);
     });
@@ -33,7 +48,7 @@ describe("sections", () => {
 
   describe("getSectionsForExtraction", () => {
     it("returns limited sections with id, heading, content", async () => {
-      await insertPaper(env.DB, "sp-extract", "2601.00003");
+      await insertTestPaper("sp-extract", "2601.00003");
       await insertSection(env.DB, "ss-e1", "sp-extract", "Intro", 1, "Content 1", 0);
       await insertSection(env.DB, "ss-e2", "sp-extract", "Methods", 2, "Content 2", 1);
       await insertSection(env.DB, "ss-e3", "sp-extract", "Results", 2, "Content 3", 2);
@@ -46,7 +61,7 @@ describe("sections", () => {
     });
 
     it("returns all sections when limit is high", async () => {
-      await insertPaper(env.DB, "sp-extract2", "2601.00004");
+      await insertTestPaper("sp-extract2", "2601.00004");
       await insertSection(env.DB, "ss-e4", "sp-extract2", "A", 1, "C1", 0);
       await insertSection(env.DB, "ss-e5", "sp-extract2", "B", 2, "C2", 1);
       await insertSection(env.DB, "ss-e6", "sp-extract2", "C", 2, "C3", 2);

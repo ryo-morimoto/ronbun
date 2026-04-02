@@ -12,7 +12,7 @@ export default defineCommand({
   args: {
     status: {
       type: "string",
-      description: "Filter by status (queued, metadata, parsed, extracted, ready, failed)",
+      description: "Filter by status (metadata, ready, failed)",
     },
     category: {
       type: "string",

@@ -12,7 +12,7 @@ const MIGRATION_STATEMENTS = [
   categories TEXT,
   published_at TEXT,
   updated_at TEXT,
-  status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'metadata', 'parsed', 'extracted', 'ready', 'failed')),
+  status TEXT NOT NULL DEFAULT 'metadata' CHECK (status IN ('metadata', 'ready', 'failed')),
   error TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
   ingested_at TEXT
@@ -65,7 +65,7 @@ const MIGRATION_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS entity_links (
   id TEXT PRIMARY KEY,
   paper_id TEXT NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
-  entity_type TEXT NOT NULL CHECK (entity_type IN ('method', 'dataset', 'author')),
+  entity_type TEXT NOT NULL CHECK (entity_type IN ('author')),
   entity_name TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 )`,
@@ -185,9 +185,9 @@ export async function seedTestData(db: D1Database) {
   await db
     .prepare(
       `INSERT OR IGNORE INTO papers (id, arxiv_id, title, status, created_at)
-     VALUES (?, ?, ?, 'queued', ?)`,
+     VALUES (?, ?, ?, 'metadata', ?)`,
     )
-    .bind("paper-3", "2405.00001", "Queued Paper", "2024-05-01T00:00:00Z")
+    .bind("paper-3", "2405.00001", "Metadata Paper", "2024-05-01T00:00:00Z")
     .run();
 
   await db
@@ -243,21 +243,21 @@ export async function seedTestData(db: D1Database) {
     .prepare(
       `INSERT OR IGNORE INTO entity_links (id, paper_id, entity_type, entity_name) VALUES (?, ?, ?, ?)`,
     )
-    .bind("el-1", "paper-1", "method", "RAG")
+    .bind("el-1", "paper-1", "author", "Shi-Qi Yan")
     .run();
 
   await db
     .prepare(
       `INSERT OR IGNORE INTO entity_links (id, paper_id, entity_type, entity_name) VALUES (?, ?, ?, ?)`,
     )
-    .bind("el-2", "paper-2", "method", "RAG")
+    .bind("el-2", "paper-2", "author", "Shi-Qi Yan")
     .run();
 
   await db
     .prepare(
       `INSERT OR IGNORE INTO entity_links (id, paper_id, entity_type, entity_name) VALUES (?, ?, ?, ?)`,
     )
-    .bind("el-3", "paper-1", "author", "Shi-Qi Yan")
+    .bind("el-3", "paper-1", "author", "Jia-Chen Gu")
     .run();
 }
 

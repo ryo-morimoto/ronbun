@@ -1,14 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchNewPapers, fetchNewPapersByCategory } from "../src/oai-pmh.ts";
+import {
+  fetchNewPapers,
+  fetchNewPapersByCategory,
+  fetchNewPapersWithMetadata,
+} from "../src/oai-pmh.ts";
 
 const SAMPLE_OAI_RESPONSE = `<?xml version="1.0" encoding="UTF-8"?>
 <OAI-PMH>
   <ListRecords>
     <record>
       <header><identifier>oai:arXiv.org:2401.15884</identifier></header>
+      <metadata><arXiv xmlns="http://arxiv.org/OAI/arXiv/">
+        <id>2401.15884</id><created>2024-01-29</created>
+        <authors><author><keyname>A</keyname></author></authors>
+        <title>Paper A</title><categories>cs.AI</categories>
+        <abstract>Abstract A</abstract>
+      </arXiv></metadata>
     </record>
     <record>
       <header><identifier>oai:arXiv.org:2401.15885</identifier></header>
+      <metadata><arXiv xmlns="http://arxiv.org/OAI/arXiv/">
+        <id>2401.15885</id><created>2024-01-30</created>
+        <authors><author><keyname>B</keyname></author></authors>
+        <title>Paper B</title><categories>cs.CL</categories>
+        <abstract>Abstract B</abstract>
+      </arXiv></metadata>
     </record>
   </ListRecords>
 </OAI-PMH>`;
@@ -18,6 +34,12 @@ const SAMPLE_OAI_WITH_RESUMPTION = `<?xml version="1.0" encoding="UTF-8"?>
   <ListRecords>
     <record>
       <header><identifier>oai:arXiv.org:2401.15886</identifier></header>
+      <metadata><arXiv xmlns="http://arxiv.org/OAI/arXiv/">
+        <id>2401.15886</id><created>2024-01-31</created>
+        <authors><author><keyname>C</keyname></author></authors>
+        <title>Paper C</title><categories>cs.LG</categories>
+        <abstract>Abstract C</abstract>
+      </arXiv></metadata>
     </record>
     <resumptionToken>token123</resumptionToken>
   </ListRecords>
@@ -28,6 +50,12 @@ const SAMPLE_OAI_PAGE2 = `<?xml version="1.0" encoding="UTF-8"?>
   <ListRecords>
     <record>
       <header><identifier>oai:arXiv.org:2401.15887</identifier></header>
+      <metadata><arXiv xmlns="http://arxiv.org/OAI/arXiv/">
+        <id>2401.15887</id><created>2024-02-01</created>
+        <authors><author><keyname>D</keyname></author></authors>
+        <title>Paper D</title><categories>cs.CV</categories>
+        <abstract>Abstract D</abstract>
+      </arXiv></metadata>
     </record>
   </ListRecords>
 </OAI-PMH>`;
@@ -37,9 +65,143 @@ const NO_RECORDS_RESPONSE = `<?xml version="1.0" encoding="UTF-8"?>
   <error code="noRecordsMatch">No records match the request</error>
 </OAI-PMH>`;
 
+const SAMPLE_OAI_ARXIV_METADATA = `<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH>
+  <ListRecords>
+    <record>
+      <header><identifier>oai:arXiv.org:2401.15884</identifier></header>
+      <metadata>
+        <arXiv xmlns="http://arxiv.org/OAI/arXiv/">
+          <id>2401.15884</id>
+          <created>2024-01-29</created>
+          <updated>2024-02-01</updated>
+          <authors>
+            <author><keyname>Smith</keyname><forenames>John A.</forenames></author>
+            <author><keyname>van der Berg</keyname><forenames>Maria</forenames></author>
+          </authors>
+          <title>A Novel Approach to Testing</title>
+          <categories>cs.AI cs.CL</categories>
+          <abstract>We present a novel approach.</abstract>
+        </arXiv>
+      </metadata>
+    </record>
+    <record>
+      <header><identifier>oai:arXiv.org:2401.15885</identifier></header>
+      <metadata>
+        <arXiv xmlns="http://arxiv.org/OAI/arXiv/">
+          <id>2401.15885</id>
+          <created>2024-01-30</created>
+          <updated>2024-01-30</updated>
+          <authors>
+            <author><keyname>Doe</keyname><forenames>Jane</forenames></author>
+          </authors>
+          <title>Another Paper on ML</title>
+          <categories>cs.LG</categories>
+          <abstract>This paper explores ML techniques.</abstract>
+        </arXiv>
+      </metadata>
+    </record>
+  </ListRecords>
+</OAI-PMH>`;
+
 beforeEach(() => {
   vi.restoreAllMocks();
   vi.useFakeTimers();
+});
+
+describe("fetchNewPapersWithMetadata", () => {
+  it("parses records with full metadata fields", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(SAMPLE_OAI_ARXIV_METADATA),
+      }),
+    );
+
+    const promise = fetchNewPapersWithMetadata("2024-01-01", "2024-01-31");
+    await vi.runAllTimersAsync();
+    const records = await promise;
+
+    expect(records).toHaveLength(2);
+
+    const first = records[0];
+    expect(first.arxivId).toBe("2401.15884");
+    expect(first.title).toBe("A Novel Approach to Testing");
+    expect(first.authors).toEqual(["John A. Smith", "Maria van der Berg"]);
+    expect(first.abstract).toBe("We present a novel approach.");
+    expect(first.categories).toEqual(["cs.AI", "cs.CL"]);
+    expect(first.publishedAt).toBe("2024-01-29");
+    expect(first.updatedAt).toBe("2024-02-01");
+
+    const second = records[1];
+    expect(second.arxivId).toBe("2401.15885");
+    expect(second.authors).toEqual(["Jane Doe"]);
+    expect(second.categories).toEqual(["cs.LG"]);
+  });
+
+  it("returns empty array on noRecordsMatch", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(NO_RECORDS_RESPONSE),
+      }),
+    );
+
+    const promise = fetchNewPapersWithMetadata("2024-01-01", "2024-01-31");
+    await vi.runAllTimersAsync();
+    const records = await promise;
+    expect(records).toEqual([]);
+  });
+
+  it("deduplicates records with the same arxivId", async () => {
+    const duplicateResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH>
+  <ListRecords>
+    <record>
+      <header><identifier>oai:arXiv.org:2401.15884</identifier></header>
+      <metadata>
+        <arXiv xmlns="http://arxiv.org/OAI/arXiv/">
+          <id>2401.15884</id>
+          <created>2024-01-29</created>
+          <updated>2024-01-29</updated>
+          <authors><author><keyname>Smith</keyname><forenames>John</forenames></author></authors>
+          <title>Duplicate Paper</title>
+          <categories>cs.AI</categories>
+          <abstract>Abstract.</abstract>
+        </arXiv>
+      </metadata>
+    </record>
+    <record>
+      <header><identifier>oai:arXiv.org:2401.15884</identifier></header>
+      <metadata>
+        <arXiv xmlns="http://arxiv.org/OAI/arXiv/">
+          <id>2401.15884</id>
+          <created>2024-01-29</created>
+          <updated>2024-01-29</updated>
+          <authors><author><keyname>Smith</keyname><forenames>John</forenames></author></authors>
+          <title>Duplicate Paper</title>
+          <categories>cs.AI</categories>
+          <abstract>Abstract.</abstract>
+        </arXiv>
+      </metadata>
+    </record>
+  </ListRecords>
+</OAI-PMH>`;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(duplicateResponse),
+      }),
+    );
+
+    const promise = fetchNewPapersWithMetadata("2024-01-01", "2024-01-31");
+    await vi.runAllTimersAsync();
+    const records = await promise;
+    expect(records).toHaveLength(1);
+  });
 });
 
 describe("fetchNewPapers", () => {

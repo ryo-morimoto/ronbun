@@ -9,6 +9,7 @@ interface Env {
   INGEST_QUEUE: Queue;
   INGEST_DLQ: Queue;
   AI: Ai;
+  ARXIV_FETCH_SCHEDULER: DurableObjectNamespace;
 
   // Environment Variables (manually added)
   API_TOKEN: string;

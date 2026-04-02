@@ -68,7 +68,10 @@ describe("fetchArxivMetadata", () => {
     expect(metadata.publishedAt).toBe("2024-01-28T00:00:00Z");
     expect(metadata.updatedAt).toBe("2024-01-29T00:00:00Z");
 
-    expect(fetch).toHaveBeenCalledWith("https://export.arxiv.org/api/query?id_list=2401.15884");
+    expect(fetch).toHaveBeenCalledWith(
+      "https://export.arxiv.org/api/query?id_list=2401.15884",
+      expect.anything(),
+    );
   });
 
   it("throws when no entry found", async () => {
@@ -83,16 +86,38 @@ describe("fetchArxivMetadata", () => {
     await expect(fetchArxivMetadata("9999.99999")).rejects.toThrow("No entry found");
   });
 
-  it("throws on HTTP error", async () => {
+  it("retries on 503 then succeeds", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          headers: new Headers({ "Retry-After": "1" }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve(SAMPLE_ENTRY_XML),
+        }),
+    );
+
+    const metadata = await fetchArxivMetadata("2401.15884");
+    expect(metadata.title).toBe("Corrective Retrieval Augmented Generation");
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws after max retries on 429", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
-        status: 503,
+        status: 429,
+        headers: new Headers({ "Retry-After": "0" }),
       }),
     );
 
-    await expect(fetchArxivMetadata("2401.15884")).rejects.toThrow("arxiv API returned 503");
+    await expect(fetchArxivMetadata("2401.15884")).rejects.toThrow("429 after 3 retries");
   });
 });
 

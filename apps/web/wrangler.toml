@@ -39,11 +39,19 @@ queue = "ronbun-ingest"
 queue = "ronbun-ingest"
 max_batch_size = 5
 max_retries = 3
+retry_delay = 10
 dead_letter_queue = "ronbun-ingest-dlq"
 
 [[env.production.queues.producers]]
 binding = "INGEST_DLQ"
 queue = "ronbun-ingest-dlq"
+
+[env.production.durable_objects]
+bindings = [{ name = "ARXIV_FETCH_SCHEDULER", class_name = "ArxivFetchScheduler" }]
+
+[[env.production.migrations]]
+tag = "v1"
+new_classes = ["ArxivFetchScheduler"]
 
 [env.production.triggers]
 crons = ["0 3 * * 1-5"]
@@ -78,8 +86,16 @@ queue = "ronbun-ingest-preview"
 queue = "ronbun-ingest-preview"
 max_batch_size = 5
 max_retries = 3
+retry_delay = 10
 dead_letter_queue = "ronbun-ingest-dlq-preview"
 
 [[env.preview.queues.producers]]
 binding = "INGEST_DLQ"
 queue = "ronbun-ingest-dlq-preview"
+
+[env.preview.durable_objects]
+bindings = [{ name = "ARXIV_FETCH_SCHEDULER", class_name = "ArxivFetchScheduler" }]
+
+[[env.preview.migrations]]
+tag = "v1"
+new_classes = ["ArxivFetchScheduler"]

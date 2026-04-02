@@ -66,10 +66,7 @@ function createMcpServer(env: Env): McpServer {
       inputSchema: {
         category: z.string().optional().describe("Filter by category"),
         year: z.number().optional().describe("Filter by year"),
-        status: z
-          .enum(["queued", "metadata", "parsed", "ready", "failed"])
-          .optional()
-          .describe("Filter by status"),
+        status: z.enum(["metadata", "ready", "failed"]).optional().describe("Filter by status"),
         sortBy: z.enum(["published_at", "created_at", "title"]).optional().describe("Sort field"),
         sortOrder: z.enum(["asc", "desc"]).optional().describe("Sort order"),
         cursor: z.string().optional().describe("Pagination cursor"),

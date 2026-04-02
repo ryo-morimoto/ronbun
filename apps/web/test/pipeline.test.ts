@@ -1,7 +1,6 @@
 import { env } from "cloudflare:test";
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { applyMigration } from "./setup.ts";
-import type { QueueMessage } from "@ronbun/types";
 import type { RonbunContext } from "@ronbun/api";
 
 // Mock @ronbun/arxiv external fetch functions
@@ -36,18 +35,8 @@ vi.mock("@ronbun/arxiv", async (importOriginal) => {
   };
 });
 
-const { ingestPaper, processQueueMessage } = await import("@ronbun/api");
-const { fetchArxivMetadata, fetchArxivHtml, fetchArxivNativeHtml } = await import("@ronbun/arxiv");
-
-function createMockQueue() {
-  const messages: QueueMessage[] = [];
-  return {
-    send: vi.fn(async (msg: QueueMessage) => {
-      messages.push(msg);
-    }),
-    messages,
-  };
-}
+const { processContent } = await import("@ronbun/api");
+const { fetchArxivHtml, fetchArxivNativeHtml } = await import("@ronbun/arxiv");
 
 function createMockAi() {
   return {
@@ -88,7 +77,7 @@ function createContext(overrides?: Partial<RonbunContext>): RonbunContext {
     storage: createMockStorage(),
     ai: createMockAi(),
     vectorIndex: createMockVectorIndex(),
-    queue: createMockQueue() as unknown as Queue<QueueMessage>,
+    queue: null as unknown as Queue,
     ...overrides,
   };
 }
@@ -97,126 +86,8 @@ beforeAll(async () => {
   await applyMigration(env.DB);
 });
 
-describe("Paper Ingestion Pipeline", () => {
-  describe("ingestPaper", () => {
-    it("inserts new paper as queued and sends metadata queue message", async () => {
-      const mockQueue = createMockQueue();
-      const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
-
-      const result = await ingestPaper(ctx, { arxivId: "2406.00001" });
-      expect(result.status).toBe("queued");
-      expect(result.paperId).toBeDefined();
-
-      const paper = await env.DB.prepare("SELECT * FROM papers WHERE arxiv_id = ?")
-        .bind("2406.00001")
-        .first();
-      expect(paper).not.toBeNull();
-      expect(paper!.status).toBe("queued");
-
-      expect(mockQueue.send).toHaveBeenCalledTimes(1);
-      expect(mockQueue.messages[0].step).toBe("metadata");
-      expect(mockQueue.messages[0].arxivId).toBe("2406.00001");
-    });
-
-    it("returns existing paper without re-ingesting (ready)", async () => {
-      await env.DB.prepare(
-        "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'ready', ?)",
-      )
-        .bind("existing-ready", "2406.00002", new Date().toISOString())
-        .run();
-
-      const mockQueue = createMockQueue();
-      const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
-
-      const result = await ingestPaper(ctx, { arxivId: "2406.00002" });
-      expect(result.status).toBe("ready");
-      expect(result.paperId).toBe("existing-ready");
-      expect(result.message).toBe("Paper already exists");
-      expect(mockQueue.send).not.toHaveBeenCalled();
-    });
-
-    it("deletes failed paper and re-ingests", async () => {
-      await env.DB.prepare(
-        "INSERT INTO papers (id, arxiv_id, status, error, created_at) VALUES (?, ?, 'failed', 'old error', ?)",
-      )
-        .bind("existing-failed", "2406.00003", new Date().toISOString())
-        .run();
-
-      const mockQueue = createMockQueue();
-      const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
-
-      const result = await ingestPaper(ctx, { arxivId: "2406.00003" });
-      expect(result.status).toBe("queued");
-      expect(result.paperId).not.toBe("existing-failed");
-      expect(mockQueue.send).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe("processMetadata (via processQueueMessage)", () => {
-    it("fetches metadata, updates DB, creates author links, embeds abstract, queues content step", async () => {
-      await env.DB.prepare(
-        "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)",
-      )
-        .bind("pm-1", "2406.10001", new Date().toISOString())
-        .run();
-
-      const mockQueue = createMockQueue();
-      const mockVectorIndex = createMockVectorIndex();
-      const ctx = createContext({
-        queue: mockQueue as unknown as Queue<QueueMessage>,
-        vectorIndex: mockVectorIndex,
-      });
-
-      await processQueueMessage(ctx, {
-        paperId: "pm-1",
-        arxivId: "2406.10001",
-        step: "metadata",
-      });
-
-      const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind("pm-1").first();
-      expect(paper!.title).toBe("Test Paper: A Novel Approach");
-      expect(paper!.status).toBe("metadata");
-
-      const links = await env.DB.prepare(
-        "SELECT * FROM entity_links WHERE paper_id = ? AND entity_type = 'author'",
-      )
-        .bind("pm-1")
-        .all();
-      expect(links.results.length).toBe(2);
-
-      // Abstract embedding upserted
-      expect(mockVectorIndex.upsert).toHaveBeenCalled();
-
-      expect(mockQueue.messages[0].step).toBe("content");
-    });
-
-    it("throws on metadata fetch error without marking failed", async () => {
-      vi.mocked(fetchArxivMetadata).mockRejectedValueOnce(new Error("API down"));
-
-      await env.DB.prepare(
-        "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)",
-      )
-        .bind("pm-fail", "2406.10002", new Date().toISOString())
-        .run();
-
-      const ctx = createContext();
-
-      await expect(
-        processQueueMessage(ctx, {
-          paperId: "pm-fail",
-          arxivId: "2406.10002",
-          step: "metadata",
-        }),
-      ).rejects.toThrow("API down");
-
-      const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?")
-        .bind("pm-fail")
-        .first();
-      expect(paper!.status).toBe("queued");
-    });
-  });
-
-  describe("processContent (via processQueueMessage)", () => {
+describe("Paper Content Processing Pipeline", () => {
+  describe("processContent", () => {
     it("fetches HTML, stores in R2, inserts sections/citations, marks paper ready", async () => {
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, title, status, created_at) VALUES (?, ?, ?, 'metadata', ?)",
@@ -227,10 +98,9 @@ describe("Paper Ingestion Pipeline", () => {
       const mockStorage = createMockStorage();
       const ctx = createContext({ storage: mockStorage });
 
-      await processQueueMessage(ctx, {
+      await processContent(ctx, {
         paperId: "pc-1",
         arxivId: "2406.20001",
-        step: "content",
       });
 
       const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind("pc-1").first();
@@ -260,10 +130,9 @@ describe("Paper Ingestion Pipeline", () => {
       const ctx = createContext();
 
       await expect(
-        processQueueMessage(ctx, {
+        processContent(ctx, {
           paperId: "pc-fail",
           arxivId: "2406.20002",
-          step: "content",
         }),
       ).rejects.toThrow("Failed to fetch paper content");
 
@@ -275,28 +144,6 @@ describe("Paper Ingestion Pipeline", () => {
   });
 
   describe("Idempotency (retry safety)", () => {
-    it("processMetadata twice does not duplicate author entity_links", async () => {
-      await env.DB.prepare(
-        "INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)",
-      )
-        .bind("idem-meta", "2406.idem01", new Date().toISOString())
-        .run();
-
-      const mockQueue = createMockQueue();
-      const ctx = createContext({ queue: mockQueue as unknown as Queue<QueueMessage> });
-      const msg: QueueMessage = { paperId: "idem-meta", arxivId: "2406.idem01", step: "metadata" };
-
-      await processQueueMessage(ctx, msg);
-      await processQueueMessage(ctx, msg);
-
-      const links = await env.DB.prepare(
-        "SELECT * FROM entity_links WHERE paper_id = ? AND entity_type = 'author'",
-      )
-        .bind("idem-meta")
-        .all();
-      expect(links.results.length).toBe(2);
-    });
-
     it("processContent twice does not duplicate sections", async () => {
       await env.DB.prepare(
         "INSERT INTO papers (id, arxiv_id, title, status, created_at) VALUES (?, ?, ?, 'metadata', ?)",
@@ -305,20 +152,21 @@ describe("Paper Ingestion Pipeline", () => {
         .run();
 
       const ctx = createContext();
-      const msg: QueueMessage = {
+
+      await processContent(ctx, {
         paperId: "idem-content",
         arxivId: "2406.idem02",
-        step: "content",
-      };
-
-      await processQueueMessage(ctx, msg);
+      });
       const countAfterFirst = await env.DB.prepare(
         "SELECT COUNT(*) as cnt FROM sections WHERE paper_id = ?",
       )
         .bind("idem-content")
         .first<{ cnt: number }>();
 
-      await processQueueMessage(ctx, msg);
+      await processContent(ctx, {
+        paperId: "idem-content",
+        arxivId: "2406.idem02",
+      });
       const countAfterSecond = await env.DB.prepare(
         "SELECT COUNT(*) as cnt FROM sections WHERE paper_id = ?",
       )
@@ -330,28 +178,32 @@ describe("Paper Ingestion Pipeline", () => {
   });
 
   describe("Full pipeline (end-to-end)", () => {
-    it("runs all steps from ingest to ready", async () => {
-      const mockQueue = createMockQueue();
+    it("processes content for a paper inserted with metadata status", async () => {
+      const paperId = "e2e-paper-1";
       const mockVectorIndex = createMockVectorIndex();
-      const ctx = createContext({
-        queue: mockQueue as unknown as Queue<QueueMessage>,
-        vectorIndex: mockVectorIndex,
-      });
+      const ctx = createContext({ vectorIndex: mockVectorIndex });
 
-      // Step 1: Ingest
-      const result = await ingestPaper(ctx, { arxivId: "2406.99999" });
-      expect(result.status).toBe("queued");
-      const paperId = result.paperId;
+      // Insert paper with 'metadata' status (as cron would do)
+      await env.DB.prepare(
+        `INSERT INTO papers (id, arxiv_id, title, authors, abstract, categories, published_at, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'metadata', ?)`,
+      )
+        .bind(
+          paperId,
+          "2406.99999",
+          "Test Paper: A Novel Approach",
+          '["Alice Smith","Bob Jones"]',
+          "We present a novel approach to testing.",
+          '["cs.AI","cs.CL"]',
+          "2024-06-15T00:00:00Z",
+          new Date().toISOString(),
+        )
+        .run();
 
-      // Step 2: Process metadata (+ abstract embedding)
-      await processQueueMessage(ctx, mockQueue.messages[0]);
-      let paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind(paperId).first();
-      expect(paper!.status).toBe("metadata");
-      expect(mockVectorIndex.upsert).toHaveBeenCalled();
+      // Process content step
+      await processContent(ctx, { paperId, arxivId: "2406.99999" });
 
-      // Step 3: Process content → ready
-      await processQueueMessage(ctx, mockQueue.messages[1]);
-      paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind(paperId).first();
+      const paper = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind(paperId).first();
       expect(paper!.status).toBe("ready");
       expect(paper!.ingested_at).not.toBeNull();
       expect(paper!.title).toBe("Test Paper: A Novel Approach");

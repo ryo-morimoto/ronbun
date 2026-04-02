@@ -18,7 +18,7 @@ export type ParsedContent = {
 
 export async function fetchArxivHtml(arxivId: string): Promise<string | null> {
   const url = `https://ar5iv.labs.arxiv.org/html/${arxivId}`;
-  const res = await fetch(url, { redirect: "follow" });
+  const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(60000) });
   if (!res.ok) return null;
   const ct = res.headers.get("content-type") || "";
   if (!ct.includes("text/html")) return null;
@@ -27,7 +27,7 @@ export async function fetchArxivHtml(arxivId: string): Promise<string | null> {
 
 export async function fetchArxivNativeHtml(arxivId: string): Promise<string | null> {
   const url = `https://arxiv.org/html/${arxivId}`;
-  const res = await fetch(url, { redirect: "follow" });
+  const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(60000) });
   if (!res.ok) return null;
   const ct = res.headers.get("content-type") || "";
   if (!ct.includes("text/html")) return null;
@@ -46,7 +46,7 @@ export async function extractPdfText(pdfBuffer: ArrayBuffer): Promise<string> {
 
 export async function fetchArxivPdf(arxivId: string): Promise<ArrayBuffer | null> {
   const url = `https://arxiv.org/pdf/${arxivId}`;
-  const res = await fetch(url, { redirect: "follow" });
+  const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(60000) });
   if (!res.ok) return null;
   return res.arrayBuffer();
 }

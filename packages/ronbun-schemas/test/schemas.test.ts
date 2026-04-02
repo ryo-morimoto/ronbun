@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   arxivIdSchema,
-  ingestPaperInput,
-  batchIngestInput,
   searchPapersInput,
   getPaperInput,
   listPapersInput,
@@ -24,51 +22,6 @@ describe("arxivIdSchema", () => {
     expect(() => arxivIdSchema.parse("2401")).toThrow();
     expect(() => arxivIdSchema.parse("2401.123")).toThrow();
     expect(() => arxivIdSchema.parse("240.12345")).toThrow();
-  });
-});
-
-describe("ingestPaperInput", () => {
-  it("accepts valid input", () => {
-    const result = ingestPaperInput.parse({ arxivId: "2401.15884" });
-    expect(result.arxivId).toBe("2401.15884");
-  });
-
-  it("rejects missing arxivId", () => {
-    expect(() => ingestPaperInput.parse({})).toThrow();
-  });
-});
-
-describe("batchIngestInput", () => {
-  it("accepts arxivIds", () => {
-    const result = batchIngestInput.parse({
-      arxivIds: ["2401.15884", "2312.00001"],
-    });
-    expect(result.arxivIds).toHaveLength(2);
-  });
-
-  it("accepts searchQuery", () => {
-    const result = batchIngestInput.parse({
-      searchQuery: "transformer attention",
-    });
-    expect(result.searchQuery).toBe("transformer attention");
-  });
-
-  it("accepts both arxivIds and searchQuery", () => {
-    const result = batchIngestInput.parse({
-      arxivIds: ["2401.15884"],
-      searchQuery: "RAG",
-    });
-    expect(result.arxivIds).toHaveLength(1);
-    expect(result.searchQuery).toBe("RAG");
-  });
-
-  it("rejects empty input (neither arxivIds nor searchQuery)", () => {
-    expect(() => batchIngestInput.parse({})).toThrow();
-  });
-
-  it("rejects more than 50 arxivIds", () => {
-    const ids = Array.from({ length: 51 }, (_, i) => `2401.${String(i).padStart(5, "0")}`);
-    expect(() => batchIngestInput.parse({ arxivIds: ids })).toThrow();
   });
 });
 
@@ -159,28 +112,23 @@ describe("queueMessageSchema", () => {
     const result = queueMessageSchema.parse({
       paperId: "abc",
       arxivId: "2401.15884",
-      step: "metadata",
     });
-    expect(result.step).toBe("metadata");
+    expect(result.paperId).toBe("abc");
+    expect(result.arxivId).toBe("2401.15884");
   });
 
-  it("accepts all steps", () => {
-    for (const step of ["metadata", "content"]) {
-      const result = queueMessageSchema.parse({
-        paperId: "abc",
+  it("rejects missing paperId", () => {
+    expect(() =>
+      queueMessageSchema.parse({
         arxivId: "2401.15884",
-        step,
-      });
-      expect(result.step).toBe(step);
-    }
+      }),
+    ).toThrow();
   });
 
-  it("rejects invalid step", () => {
+  it("rejects missing arxivId", () => {
     expect(() =>
       queueMessageSchema.parse({
         paperId: "abc",
-        arxivId: "2401.15884",
-        step: "invalid",
       }),
     ).toThrow();
   });

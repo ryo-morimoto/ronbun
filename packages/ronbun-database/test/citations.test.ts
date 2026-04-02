@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
 import { applyMigration } from "./helper.ts";
-import { insertPaper } from "../src/papers.ts";
+import { insertPapersWithMetadataBatch } from "../src/papers.ts";
 import {
   getCitationsBySource,
   getCitedBy,
@@ -9,12 +9,25 @@ import {
   findPaperIdByArxivId,
 } from "../src/citations.ts";
 
+async function insertTestPaper(id: string, arxivId: string, title: string) {
+  await insertPapersWithMetadataBatch(env.DB, [
+    {
+      id,
+      arxivId,
+      title,
+      authors: [],
+      abstract: "",
+      categories: [],
+      publishedAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+    },
+  ]);
+}
+
 beforeAll(async () => {
   await applyMigration(env.DB);
-  await insertPaper(env.DB, "cp-1", "2801.00001");
-  await insertPaper(env.DB, "cp-2", "2801.00002");
-  await env.DB.prepare(`UPDATE papers SET title = 'Source Paper' WHERE id = ?`).bind("cp-1").run();
-  await env.DB.prepare(`UPDATE papers SET title = 'Target Paper' WHERE id = ?`).bind("cp-2").run();
+  await insertTestPaper("cp-1", "2801.00001", "Source Paper");
+  await insertTestPaper("cp-2", "2801.00002", "Target Paper");
 });
 
 describe("citations", () => {
@@ -36,14 +49,8 @@ describe("citations", () => {
 
   describe("getCitedBy", () => {
     it("finds incoming citations", async () => {
-      await insertPaper(env.DB, "cp-cited-1", "2801.00011");
-      await insertPaper(env.DB, "cp-cited-2", "2801.00012");
-      await env.DB.prepare(`UPDATE papers SET title = 'Citing Paper' WHERE id = ?`)
-        .bind("cp-cited-1")
-        .run();
-      await env.DB.prepare(`UPDATE papers SET title = 'Cited Paper' WHERE id = ?`)
-        .bind("cp-cited-2")
-        .run();
+      await insertTestPaper("cp-cited-1", "2801.00011", "Citing Paper");
+      await insertTestPaper("cp-cited-2", "2801.00012", "Cited Paper");
       await insertCitation(
         env.DB,
         "cit-test",

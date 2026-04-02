@@ -1,9 +1,7 @@
-import { fetchNewPapers, generateId } from "@ronbun/arxiv";
-import { findExistingArxivIds, insertPapersBatch } from "@ronbun/database";
-import type { QueueMessage } from "@ronbun/types";
-import { createRonbunContext } from "./context";
-
-const QUEUE_BATCH_SIZE = 100;
+import { fetchNewPapersWithMetadata, generateId } from "@ronbun/arxiv";
+import { findExistingArxivIds, insertPapersWithMetadataBatch } from "@ronbun/database";
+import type { PaperInsert } from "@ronbun/database";
+import { batchEmbedPapers } from "@ronbun/vector";
 
 export async function handleScheduled(env: Env): Promise<void> {
   const now = new Date();
@@ -14,33 +12,51 @@ export async function handleScheduled(env: Env): Promise<void> {
 
   console.log(`Cron: fetching all papers for ${fromDate}`);
 
-  const arxivIds = await fetchNewPapers(fromDate, untilDate);
-  console.log(`Cron: found ${arxivIds.length} papers from OAI-PMH`);
+  const records = await fetchNewPapersWithMetadata(fromDate, untilDate);
+  console.log(`Cron: found ${records.length} papers from OAI-PMH`);
 
-  if (arxivIds.length === 0) return;
-
-  const ctx = createRonbunContext(env);
+  if (records.length === 0) return;
 
   // Batch check for existing papers
-  const existing = await findExistingArxivIds(ctx.db, arxivIds);
-  const newIds = arxivIds.filter((id) => !existing.has(id));
-  console.log(`Cron: ${newIds.length} new, ${existing.size} already in DB`);
+  const existing = await findExistingArxivIds(
+    env.DB,
+    records.map((r) => r.arxivId),
+  );
+  const newRecords = records.filter((r) => !existing.has(r.arxivId));
+  console.log(`Cron: ${newRecords.length} new, ${existing.size} already in DB`);
 
-  if (newIds.length === 0) return;
+  if (newRecords.length === 0) return;
 
-  // Batch insert papers
-  const papers = newIds.map((arxivId) => ({ id: generateId(), arxivId }));
-  await insertPapersBatch(ctx.db, papers);
+  // Batch insert papers with metadata + author entity_links
+  const papers: PaperInsert[] = newRecords.map((r) => ({
+    id: generateId(),
+    arxivId: r.arxivId,
+    title: r.title,
+    authors: r.authors,
+    abstract: r.abstract,
+    categories: r.categories,
+    publishedAt: r.publishedAt,
+    updatedAt: r.updatedAt,
+  }));
+  await insertPapersWithMetadataBatch(env.DB, papers);
 
-  // Send queue messages in batches
-  for (let i = 0; i < papers.length; i += QUEUE_BATCH_SIZE) {
-    const batch = papers.slice(i, i + QUEUE_BATCH_SIZE);
-    await ctx.queue.sendBatch(
-      batch.map((p) => ({
-        body: { paperId: p.id, arxivId: p.arxivId, step: "metadata" } satisfies QueueMessage,
-      })),
-    );
-  }
+  // Batch embed abstracts
+  const papersWithAbstract = papers
+    .filter((p) => p.abstract)
+    .map((p) => ({ id: p.id, abstract: p.abstract }));
+  const embedded = await batchEmbedPapers(env.VECTOR_INDEX, env.AI, papersWithAbstract);
+  console.log(`Cron: embedded ${embedded} abstracts`);
 
-  console.log(`Cron: queued ${newIds.length} papers for ingestion`);
+  // Send to DO alarm scheduler for rate-controlled content fetching
+  const batchId = `${fromDate}-${Date.now()}`;
+  const scheduler = env.ARXIV_FETCH_SCHEDULER.get(env.ARXIV_FETCH_SCHEDULER.idFromName("default"));
+  await scheduler.fetch("https://do/add-batch", {
+    method: "POST",
+    body: JSON.stringify({
+      batchId,
+      items: papers.map((p) => ({ paperId: p.id, arxivId: p.arxivId })),
+    }),
+  });
+
+  console.log(`Cron: queued ${papers.length} papers for content fetch via DO scheduler`);
 }

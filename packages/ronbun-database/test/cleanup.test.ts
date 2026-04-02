@@ -16,7 +16,7 @@ describe("cleanup functions", () => {
 
   beforeAll(async () => {
     await env.DB.prepare(
-      "INSERT OR IGNORE INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'parsed', ?)",
+      "INSERT OR IGNORE INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'metadata', ?)",
     )
       .bind(paperId, "2406.cleanup", new Date().toISOString())
       .run();

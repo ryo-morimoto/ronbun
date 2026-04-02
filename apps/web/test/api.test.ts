@@ -1,6 +1,6 @@
 import { env } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
-import { applyMigration, seedTestData, authHeaders } from "./setup.ts";
+import { applyMigration, seedTestData } from "./setup.ts";
 import { handleApiRequest } from "../src/server/api/router";
 
 /** Helper: call the API handler with bindings from miniflare. */
@@ -37,27 +37,6 @@ describe("Authentication", () => {
   it("allows unauthenticated access to read endpoints", async () => {
     const res = await fetchApi("http://localhost/api/papers");
     expect(res.status).toBe(200);
-  });
-
-  it("returns 401 when no token is provided for write endpoints", async () => {
-    const res = await fetchApi("http://localhost/api/papers/ingest", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ arxivId: "2401.15884" }),
-    });
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 401 when wrong token is provided for write endpoints", async () => {
-    const res = await fetchApi("http://localhost/api/papers/ingest", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer wrong-token",
-      },
-      body: JSON.stringify({ arxivId: "2401.15884" }),
-    });
-    expect(res.status).toBe(401);
   });
 });
 
@@ -168,11 +147,11 @@ describe("GET /api/papers/:id/status", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns queued status for queued paper", async () => {
+  it("returns metadata status for paper in metadata state", async () => {
     const res = await fetchApi("http://localhost/api/papers/paper-3/status");
     expect(res.status).toBe(200);
     const body = (await res.json()) as { status: string };
-    expect(body.status).toBe("queued");
+    expect(body.status).toBe("metadata");
   });
 });
 
@@ -201,33 +180,6 @@ describe("GET /api/papers/:id/related", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { relatedPapers: unknown[] };
     expect(body.relatedPapers).toBeDefined();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// POST /api/papers/ingest
-// ---------------------------------------------------------------------------
-describe("POST /api/papers/ingest", () => {
-  it("queues a new paper for ingestion", async () => {
-    const res = await fetchApi("http://localhost/api/papers/ingest", {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({ arxivId: "2402.00001" }),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { paperId: string };
-    expect(body.paperId).toBeDefined();
-  });
-
-  it("returns existing paper on duplicate ingest", async () => {
-    const res = await fetchApi("http://localhost/api/papers/ingest", {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({ arxivId: "2401.15884" }),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { message: string };
-    expect(body.message).toBe("Paper already exists");
   });
 });
 

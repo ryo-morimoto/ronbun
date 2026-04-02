@@ -7,14 +7,29 @@ export type ArxivMetadata = {
   updatedAt: string;
 };
 
+const MAX_RETRIES = 3;
+
 export async function fetchArxivMetadata(arxivId: string): Promise<ArxivMetadata> {
   const url = `https://export.arxiv.org/api/query?id_list=${arxivId}`;
-  const res = await fetch(url);
-  if (!res.ok) {
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+
+    if (res.ok) {
+      const xml = await res.text();
+      return parseArxivXml(xml, arxivId);
+    }
+
+    if (res.status === 429 || res.status === 503) {
+      const retryAfter = parseInt(res.headers.get("Retry-After") || "20", 10);
+      await new Promise((r) => setTimeout(r, retryAfter * 1000));
+      continue;
+    }
+
     throw new Error(`arxiv API returned ${res.status}`);
   }
-  const xml = await res.text();
-  return parseArxivXml(xml, arxivId);
+
+  throw new Error(`arxiv API returned 429 after ${MAX_RETRIES} retries`);
 }
 
 function parseArxivXml(xml: string, arxivId: string): ArxivMetadata {

@@ -2,7 +2,6 @@ import type { RonbunContext } from "./context.ts";
 import type { QueueMessage } from "@ronbun/types";
 import { queueMessageSchema } from "@ronbun/schemas";
 import {
-  fetchArxivMetadata,
   fetchArxivHtml,
   fetchArxivNativeHtml,
   fetchArxivPdf,
@@ -12,59 +11,18 @@ import {
   generateId,
 } from "@ronbun/arxiv";
 import {
-  updatePaperMetadata,
   markPaperReady,
   insertSection,
-  insertEntityLink,
   insertCitation,
-  findPaperIdByArxivId,
-  deleteAuthorLinksByPaperId,
   deleteSectionsByPaperId,
   deleteCitationsBySourcePaperId,
 } from "@ronbun/database";
+import { findPaperIdByArxivId } from "@ronbun/database";
 import { storeHtml, storePdf } from "@ronbun/storage";
-import { upsertPaperEmbedding } from "@ronbun/vector";
 
-export async function processQueueMessage(
-  ctx: RonbunContext,
-  message: QueueMessage,
-): Promise<void> {
-  const parsed = queueMessageSchema.parse(message);
-  switch (parsed.step) {
-    case "metadata":
-      return processMetadata(ctx, parsed.arxivId, parsed.paperId);
-    case "content":
-      return processContent(ctx, parsed.arxivId, parsed.paperId);
-  }
-}
+export async function processContent(ctx: RonbunContext, message: QueueMessage): Promise<void> {
+  const { paperId, arxivId } = queueMessageSchema.parse(message);
 
-async function processMetadata(
-  ctx: RonbunContext,
-  arxivId: string,
-  paperId: string,
-): Promise<void> {
-  await deleteAuthorLinksByPaperId(ctx.db, paperId);
-
-  const metadata = await fetchArxivMetadata(arxivId);
-  await updatePaperMetadata(ctx.db, paperId, metadata);
-
-  for (const author of metadata.authors) {
-    await insertEntityLink(ctx.db, generateId(), paperId, "author", author);
-  }
-
-  // Abstract embedding for semantic search
-  if (metadata.abstract) {
-    await upsertPaperEmbedding(ctx.vectorIndex, ctx.ai, paperId, metadata.abstract);
-  }
-
-  await ctx.queue.send({
-    arxivId,
-    paperId,
-    step: "content",
-  } satisfies QueueMessage);
-}
-
-async function processContent(ctx: RonbunContext, arxivId: string, paperId: string): Promise<void> {
   await deleteSectionsByPaperId(ctx.db, paperId);
   await deleteCitationsBySourcePaperId(ctx.db, paperId);
 

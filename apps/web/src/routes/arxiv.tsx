@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "../lib/api";
 
 type ArxivPaper = {
@@ -74,20 +74,6 @@ function ArxivComponent() {
       return response.json();
     },
     enabled: !!previewId,
-  });
-
-  const ingestMutation = useMutation({
-    mutationFn: async (arxivId: string) => {
-      const response = await apiClient.api.papers.ingest.$post({
-        json: { arxivId },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to ingest paper");
-      }
-
-      return response.json();
-    },
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -225,25 +211,6 @@ function ArxivComponent() {
                   >
                     View on arXiv →
                   </a>
-                  <div className="mt-4 pt-4 border-t">
-                    <button
-                      onClick={() => ingestMutation.mutate(previewQuery.data!.arxivId)}
-                      disabled={ingestMutation.isPending}
-                      className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {ingestMutation.isPending ? "Ingesting..." : "Ingest Paper"}
-                    </button>
-                    {ingestMutation.isSuccess && (
-                      <p className="text-sm text-green-600 mt-2 text-center">
-                        Paper queued for ingestion!
-                      </p>
-                    )}
-                    {ingestMutation.error && (
-                      <p className="text-sm text-red-600 mt-2 text-center">
-                        Error: {ingestMutation.error.message}
-                      </p>
-                    )}
-                  </div>
                 </>
               )}
             </div>

@@ -13,5 +13,5 @@ export type { ParsedSection, ParsedReference, ParsedContent } from "./parser.ts"
 
 export { generateId } from "./id.ts";
 
-export { fetchNewPapers, fetchNewPapersByCategory } from "./oai-pmh.ts";
+export { fetchNewPapersWithMetadata, fetchNewPapers, fetchNewPapersByCategory } from "./oai-pmh.ts";
 export type { OaiPmhRecord } from "./oai-pmh.ts";

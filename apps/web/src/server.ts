@@ -1,7 +1,9 @@
 import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
+
+export { ArxivFetchScheduler } from "./server/do/arxiv-fetch-scheduler";
 import type { Register } from "@tanstack/react-router";
 import type { RequestHandler } from "@tanstack/react-start/server";
-import { processQueueMessage } from "@ronbun/api";
+import { processContent } from "@ronbun/api";
 import type { QueueMessage } from "@ronbun/types";
 import { updatePaperError, markPaperFailed } from "@ronbun/database";
 import { handleScheduled } from "./server/cron";
@@ -70,11 +72,10 @@ export default {
     for (const message of batch.messages) {
       const body = message.body as QueueMessage;
       try {
-        await processQueueMessage(ctx, body);
+        await processContent(ctx, body);
         message.ack();
       } catch (error) {
         const errorInfo = JSON.stringify({
-          step: body.step,
           message: error instanceof Error ? error.message : String(error),
           name: error instanceof Error ? error.name : "UnknownError",
           attempt: message.attempts,
@@ -82,12 +83,9 @@ export default {
         await updatePaperError(ctx.db, body.paperId, errorInfo).catch(() => {});
         if (message.attempts >= maxRetries) {
           await markPaperFailed(ctx.db, body.paperId, errorInfo).catch(() => {});
-          console.error(
-            `[${body.step}] permanently failed after ${message.attempts} attempts:`,
-            error,
-          );
+          console.error(`[content] permanently failed after ${message.attempts} attempts:`, error);
         } else {
-          console.error(`[${body.step}] attempt ${message.attempts}/${maxRetries}:`, error);
+          console.error(`[content] attempt ${message.attempts}/${maxRetries}:`, error);
         }
         message.retry();
       }

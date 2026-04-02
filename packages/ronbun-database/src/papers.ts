@@ -17,7 +17,6 @@ export async function findExistingArxivIds(
   const existing = new Set<string>();
   if (arxivIds.length === 0) return existing;
 
-  // D1 batch: split into chunks to avoid SQL variable limits
   const chunkSize = 100;
   for (let i = 0; i < arxivIds.length; i += chunkSize) {
     const chunk = arxivIds.slice(i, i + chunkSize);
@@ -33,69 +32,63 @@ export async function findExistingArxivIds(
   return existing;
 }
 
-export async function insertPaper(db: D1Database, id: string, arxivId: string): Promise<void> {
-  const now = new Date().toISOString();
-  await db
-    .prepare("INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)")
-    .bind(id, arxivId, now)
-    .run();
-}
+export type PaperInsert = {
+  id: string;
+  arxivId: string;
+  title: string;
+  authors: string[];
+  abstract: string;
+  categories: string[];
+  publishedAt: string;
+  updatedAt: string;
+};
 
-export async function insertPapersBatch(
+export async function insertPapersWithMetadataBatch(
   db: D1Database,
-  papers: Array<{ id: string; arxivId: string }>,
+  papers: PaperInsert[],
 ): Promise<void> {
   if (papers.length === 0) return;
   const now = new Date().toISOString();
-  const chunkSize = 100;
+  const chunkSize = 50; // smaller chunks since each paper has more columns + entity_links
+
   for (let i = 0; i < papers.length; i += chunkSize) {
     const chunk = papers.slice(i, i + chunkSize);
-    const stmts = chunk.map((p) =>
-      db
-        .prepare("INSERT INTO papers (id, arxiv_id, status, created_at) VALUES (?, ?, 'queued', ?)")
-        .bind(p.id, p.arxivId, now),
-    );
+    const stmts: D1PreparedStatement[] = [];
+
+    for (const p of chunk) {
+      stmts.push(
+        db
+          .prepare(
+            `INSERT INTO papers (id, arxiv_id, title, authors, abstract, categories, published_at, updated_at, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'metadata', ?)`,
+          )
+          .bind(
+            p.id,
+            p.arxivId,
+            p.title,
+            JSON.stringify(p.authors),
+            p.abstract,
+            JSON.stringify(p.categories),
+            p.publishedAt,
+            p.updatedAt,
+            now,
+          ),
+      );
+
+      // Author entity_links
+      for (const author of p.authors) {
+        stmts.push(
+          db
+            .prepare(
+              "INSERT INTO entity_links (id, paper_id, entity_type, entity_name) VALUES (?, ?, 'author', ?)",
+            )
+            .bind(crypto.randomUUID(), p.id, author),
+        );
+      }
+    }
+
     await db.batch(stmts);
   }
-}
-
-export async function updatePaperMetadata(
-  db: D1Database,
-  paperId: string,
-  metadata: {
-    title: string;
-    authors: string[];
-    abstract: string;
-    categories: string[];
-    publishedAt: string;
-    updatedAt: string;
-  },
-): Promise<void> {
-  await db
-    .prepare(
-      `UPDATE papers
-       SET title = ?, authors = ?, abstract = ?, categories = ?,
-           published_at = ?, updated_at = ?, status = 'metadata'
-       WHERE id = ?`,
-    )
-    .bind(
-      metadata.title,
-      JSON.stringify(metadata.authors),
-      metadata.abstract,
-      JSON.stringify(metadata.categories),
-      metadata.publishedAt,
-      metadata.updatedAt,
-      paperId,
-    )
-    .run();
-}
-
-export async function updatePaperStatus(
-  db: D1Database,
-  paperId: string,
-  status: PaperStatus,
-): Promise<void> {
-  await db.prepare("UPDATE papers SET status = ? WHERE id = ?").bind(status, paperId).run();
 }
 
 export async function markPaperReady(db: D1Database, paperId: string): Promise<void> {
@@ -129,14 +122,6 @@ export async function getPaperById(db: D1Database, id: string): Promise<PaperRow
     .prepare("SELECT * FROM papers WHERE id = ? OR arxiv_id = ?")
     .bind(id, id)
     .first<PaperRow>();
-}
-
-export async function getPaperArxivId(db: D1Database, paperId: string): Promise<string | null> {
-  const row = await db
-    .prepare("SELECT arxiv_id FROM papers WHERE id = ?")
-    .bind(paperId)
-    .first<{ arxiv_id: string }>();
-  return row?.arxiv_id ?? null;
 }
 
 export async function listPapers(

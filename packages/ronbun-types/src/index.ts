@@ -1,4 +1,4 @@
-export type PaperStatus = "queued" | "metadata" | "parsed" | "ready" | "failed";
+export type PaperStatus = "metadata" | "ready" | "failed";
 
 export type PaperRow = {
   id: string;
@@ -43,15 +43,12 @@ export type CitationRow = {
 export type EntityLinkRow = {
   id: string;
   paper_id: string;
-  entity_type: "method" | "dataset" | "author";
+  entity_type: "author";
   entity_name: string;
   created_at: string;
 };
 
-export type QueueStep = "metadata" | "content";
-
 export type QueueMessage = {
   paperId: string;
   arxivId: string;
-  step: QueueStep;
 };
