@@ -31,20 +31,6 @@ export function createClient() {
   });
 }
 
-export type Client = ReturnType<typeof createClient>;
-
-export function hasApiToken(): boolean {
-  return Boolean(API_TOKEN);
-}
-
-export function requireApiToken(operation: string): void {
-  if (!hasApiToken()) {
-    throw new Error(
-      `Credentials are required. This operation is not available yet (${operation}).`,
-    );
-  }
-}
-
 export async function handleResponse<T>(res: {
   ok: boolean;
   status: number;

@@ -26,7 +26,6 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250514.0",
     "@ronbun/web": "workspace:*",
-    "@vitest/coverage-istanbul": "^3.2.4",
     "bun-types": "^1.2.3",
     "citty": "^0.1.6",
     "hono": "^4.7.6",

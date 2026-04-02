@@ -15,14 +15,3 @@ export async function confirmPrompt(message: string, defaultYes = true): Promise
     rl.close();
   }
 }
-
-export async function selectPrompt(message: string): Promise<string> {
-  if (!isTTY) return "skip";
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  try {
-    const answer = await rl.question(`  ${message}: `);
-    return answer.trim() || "skip";
-  } finally {
-    rl.close();
-  }
-}

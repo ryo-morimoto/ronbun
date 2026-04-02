@@ -27,8 +27,6 @@
     "@ronbun/api": "workspace:*",
     "@ronbun/arxiv": "workspace:*",
     "@ronbun/database": "workspace:*",
-    "@ronbun/schemas": "workspace:*",
-    "@ronbun/storage": "workspace:*",
     "@ronbun/types": "workspace:*",
     "@ronbun/vector": "workspace:*",
     "@tanstack/react-query": "^5.90.20",

@@ -18,8 +18,7 @@
     "@ronbun/schemas": "workspace:*",
     "@ronbun/storage": "workspace:*",
     "@ronbun/types": "workspace:*",
-    "@ronbun/vector": "workspace:*",
-    "zod": "^3.25.3"
+    "@ronbun/vector": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250514.0",

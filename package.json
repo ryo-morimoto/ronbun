@@ -21,7 +21,7 @@
     "db:migrate:production": "bunx wrangler d1 migrations apply ronbun-db --env production --remote --config apps/web/wrangler.toml"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^3.2.4",
+    "knip": "^6.2.0",
     "lefthook": "^2.1.0",
     "oxfmt": "^0.28.0",
     "oxlint": "^1.43.0",

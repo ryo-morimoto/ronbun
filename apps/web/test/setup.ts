@@ -260,10 +260,3 @@ export async function seedTestData(db: D1Database) {
     .bind("el-3", "paper-1", "author", "Jia-Chen Gu")
     .run();
 }
-
-export function authHeaders(): HeadersInit {
-  return {
-    Authorization: "Bearer test-token",
-    "Content-Type": "application/json",
-  };
-}
