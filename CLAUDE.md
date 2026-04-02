@@ -2,7 +2,7 @@
 
 ## Project
 
-ronbun -- a fast, modern browser for academic papers with MCP server support.
+ronbun -- a fast, modern browser for academic papers.
 
 ## Principles
 
@@ -34,7 +34,6 @@ Follow the tiered processing pattern: index cheaply and broadly, extract expensi
 - Turborepo + bun workspaces monorepo
 - Hono (HTTP framework)
 - D1 (SQLite), R2 (object storage), Vectorize (vector search), Queues (async processing)
-- MCP SDK (`@modelcontextprotocol/sdk`)
 - Zod for schema validation
 - Vitest + `@cloudflare/vitest-pool-workers` for testing
 - pdf-oxide-wasm (Rust WASM) for PDF text extraction
@@ -46,7 +45,6 @@ apps/
   web/                -- TanStack Start on Cloudflare Workers (@ronbun/web)
     src/server.ts     -- Worker entrypoint: fetch, queue, scheduled handlers
     src/server/api/   -- Hono REST routes (papers, arxiv)
-    src/server/mcp/   -- MCP server (read-only tools)
     src/server/cron.ts -- Cron: OAI-PMH bulk harvest + batch insert + queue
     src/routes/       -- TanStack Start pages (search, papers, paper detail, arxiv)
     wrangler.toml     -- Dev config (bindings in env.production / env.preview)
@@ -90,7 +88,7 @@ cd apps/cli && bun run dev       # Run CLI locally
 - Monorepo: `@ronbun/*` namespace, `workspace:*` protocol for internal deps
 - Internal packages use JIT TypeScript (export .ts directly, no build step)
 - Dependency Injection: Cloudflare bindings passed via `RonbunContext` type
-- `@ronbun/api` returns plain data objects, NOT MCP-formatted responses
+- `@ronbun/api` returns plain data objects
 - All IDs use `crypto.randomUUID()`
 - Paper ingestion: cron fetches OAI-PMH metadata → batch insert + batch embed → DO alarm scheduler → Queue content step
 - Paper status lifecycle: metadata → ready (or failed)
@@ -98,9 +96,9 @@ cd apps/cli && bun run dev       # Run CLI locally
 - DO alarm scheduler (ArxivFetchScheduler): rate-controls content fetch at 3s intervals
 - Content step: fetch HTML/PDF (3-tier fallback: ar5iv → native HTML → pdf-oxide-wasm) + parse sections/citations + mark ready
 - Hybrid search: FTS (title + abstract + sections) + Vector (abstract embedding) merged via RRF with citation authority boost
-- Bearer token auth on `/api/*` and `/mcp` endpoints
+- Bearer token auth on `/api/*` endpoints
 - REST routes use Hono method chaining for AppType inference (hono/client)
-- CLI and MCP are read-only interfaces; no manual ingestion API
+- CLI is a read-only interface; no manual ingestion API
 - Cron (`0 3 * * 1-5 UTC`): OAI-PMH bulk harvest all categories → batch insert with metadata → batch embed abstracts → DO scheduler for content fetch
 - OAI-PMH endpoint: `oaipmh.arxiv.org/oai` (not export.arxiv.org), arXiv metadata prefix, no set param
 - ArxivFetchScheduler DO: holds pending content fetches, fires alarm every 3s to send one Queue message

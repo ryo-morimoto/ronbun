@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   startFetch: vi.fn(),
   handleApiRequest: vi.fn(),
-  handleMcpRequest: vi.fn(),
   processContent: vi.fn(),
   updatePaperError: vi.fn(),
   markPaperFailed: vi.fn(),
@@ -17,10 +16,6 @@ vi.mock("@tanstack/react-start/server", () => ({
 
 vi.mock("../src/server/api/router", () => ({
   handleApiRequest: mocks.handleApiRequest,
-}));
-
-vi.mock("../src/server/mcp/handler", () => ({
-  handleMcpRequest: mocks.handleMcpRequest,
 }));
 
 vi.mock("@ronbun/api", () => ({
@@ -86,7 +81,6 @@ beforeEach(() => {
 
   mocks.startFetch.mockResolvedValue(new Response("start"));
   mocks.handleApiRequest.mockResolvedValue(null);
-  mocks.handleMcpRequest.mockResolvedValue(new Response("mcp"));
   mocks.processContent.mockResolvedValue(undefined);
   mocks.updatePaperError.mockResolvedValue(undefined);
   mocks.markPaperFailed.mockResolvedValue(undefined);
@@ -117,22 +111,6 @@ describe("resolveEnvFromOptions", () => {
 });
 
 describe("fetch routing", () => {
-  it("routes POST /mcp before API and SSR handlers", async () => {
-    const env = createRuntimeEnv();
-    mocks.handleMcpRequest.mockResolvedValueOnce(new Response("mcp-ok"));
-
-    const response = await worker.fetch(
-      new Request("http://localhost/mcp", { method: "POST" }),
-      env,
-      {} as ExecutionContext,
-    );
-
-    expect(await response.text()).toBe("mcp-ok");
-    expect(mocks.handleMcpRequest).toHaveBeenCalledTimes(1);
-    expect(mocks.handleApiRequest).not.toHaveBeenCalled();
-    expect(mocks.startFetch).not.toHaveBeenCalled();
-  });
-
   it("routes /api/* to API handler and falls back to SSR when API returns null", async () => {
     const env = createRuntimeEnv();
 

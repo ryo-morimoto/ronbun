@@ -24,7 +24,6 @@
     "clean": "rm -rf .output .vinxi dist"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
     "@ronbun/api": "workspace:*",
     "@ronbun/arxiv": "workspace:*",
     "@ronbun/database": "workspace:*",

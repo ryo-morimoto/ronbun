@@ -1,6 +1,6 @@
 # ronbun
 
-A fast, modern browser for academic papers. Available as an MCP server, web app, and CLI.
+A fast, modern browser for academic papers. Available as a web app and CLI.
 
 ## Features
 
@@ -8,7 +8,6 @@ A fast, modern browser for academic papers. Available as an MCP server, web app,
 - Hybrid search (semantic + keyword) with Reciprocal Rank Fusion
 - AI-powered structured knowledge extraction (methods, datasets, results, etc.)
 - Citation graph and related paper discovery
-- MCP protocol support for AI assistant integration
 - CLI for terminal-based paper operations
 
 ## Tech Stack
@@ -28,9 +27,8 @@ A fast, modern browser for academic papers. Available as an MCP server, web app,
 
 ```
 apps/
-  api/          REST + MCP + Cron server on Cloudflare Workers (@ronbun/server)
+  web/          TanStack Start on Cloudflare Workers (@ronbun/web)
   cli/          Terminal tool using citty + hono/client (@ronbun/cli)
-  web/          Web frontend on Cloudflare Pages (TanStack Start) [WIP]
 
 packages/
   ronbun-types/      Shared TypeScript types
@@ -118,18 +116,6 @@ bun run db:migrate:production
 - `API_TOKEN`
 - `ARXIV_CATEGORIES`
 
-## MCP Tools
-
-| Tool                 | Description                                                        |
-| -------------------- | ------------------------------------------------------------------ |
-| `ingest_paper`       | Ingest a single arXiv paper by ID                                  |
-| `batch_ingest`       | Ingest multiple papers by IDs or search query                      |
-| `search_papers`      | Hybrid semantic + keyword search                                   |
-| `search_extractions` | Search extracted knowledge across papers                           |
-| `get_paper`          | Get full paper details with sections, extractions, citations       |
-| `list_papers`        | List papers with filtering and pagination                          |
-| `find_related`       | Find related papers via citations, shared methods/datasets/authors |
-
 ## CLI Commands
 
 ```bash
@@ -145,11 +131,10 @@ ronbun status <arxivId>
 
 - [x] Monorepo migration (Turborepo + bun workspaces)
 - [x] Shared domain packages (`@ronbun/*`)
-- [x] REST + MCP + Cron server (`apps/api`)
+- [x] REST + Cron server (`apps/web`)
 - [x] CLI tool with citty + hono/client (`apps/cli`)
 - [x] Daily arXiv ingestion via OAI-PMH Cron trigger
-- [ ] Web frontend (`apps/web` -- TanStack Start on Cloudflare Pages)
-- [ ] Agent skills for MCP tool orchestration
+- [x] Web frontend (`apps/web` -- TanStack Start on Cloudflare Workers)
 
 ### Future Enhancements
 

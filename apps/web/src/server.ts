@@ -8,7 +8,6 @@ import type { QueueMessage } from "@ronbun/types";
 import { updatePaperError, markPaperFailed } from "@ronbun/database";
 import { handleScheduled } from "./server/cron";
 import { handleApiRequest } from "./server/api/router";
-import { handleMcpRequest } from "./server/mcp/handler";
 import {
   createRonbunContext,
   describeMissingRonbunContextBindings,
@@ -39,13 +38,6 @@ const serverEntry = createServerEntry({
   async fetch(request, options: unknown) {
     const env = resolveEnvFromOptions(options);
     const url = new URL(request.url);
-
-    if (url.pathname === "/mcp" && request.method === "POST") {
-      if (!env) {
-        return missingBindingsResponse(options);
-      }
-      return handleMcpRequest(request, env);
-    }
 
     if (url.pathname.startsWith("/api/")) {
       if (!env) {
