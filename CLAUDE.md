@@ -97,7 +97,7 @@ cd apps/cli && bun run dev       # Run CLI locally
 - Content step: fetch HTML/PDF (3-tier fallback: ar5iv → native HTML → pdf-oxide-wasm) + parse sections/citations + mark ready
 - ar5iv is a static dataset (not live), updated periodically. Recent papers fall through to arXiv native HTML or PDF
 - Hybrid search: FTS (title + abstract + sections) + Vector (abstract embedding) merged via RRF with citation authority boost
-- Bearer token auth on `/api/*` endpoints
+- `/api/*` is unauthenticated (rate-limited by IP or Bearer token if provided)
 - REST routes use Hono method chaining for AppType inference (hono/client)
 - CLI is a read-only interface; no manual ingestion API
 - Cron (`0 3 * * 1-5 UTC`): OAI-PMH bulk harvest all categories → batch insert with metadata → batch embed abstracts → DO scheduler for content fetch

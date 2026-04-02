@@ -1,6 +1,6 @@
 # @ronbun/cli
 
-CLI for searching and managing academic papers with ronbun.
+CLI for searching and browsing academic papers with ronbun.
 
 ## Install
 
@@ -13,8 +13,3 @@ npm i -g @ronbun/cli
 ```bash
 ronbun --help
 ```
-
-Set API connection environment variables when needed:
-
-- `RONBUN_API_URL` (default: `http://localhost:8787`)
-- `RONBUN_API_TOKEN` (required for ingest/write operations)
