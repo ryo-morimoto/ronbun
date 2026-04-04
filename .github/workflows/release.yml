@@ -12,6 +12,128 @@ jobs:
   release-please:
     name: Release Please
     runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      cli_released: ${{ steps.release.outputs['apps/cli--release_created'] }}
+      cli_tag: ${{ steps.release.outputs['apps/cli--tag_name'] }}
+      cli_version: ${{ steps.release.outputs['apps/cli--version'] }}
+      web_released: ${{ steps.release.outputs['apps/web--release_created'] }}
+      web_tag: ${{ steps.release.outputs['apps/web--tag_name'] }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  release-cli-npm:
+    name: Release CLI to npm registry
+    needs: release-please
+    if: needs.release-please.outputs.cli_released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run --filter @ronbun/cli build
+
+      - name: Ensure shebang
+        run: |
+          if ! head -1 dist/index.js | grep -q '^#!/'; then
+            sed -i '1i#!/usr/bin/env node' dist/index.js
+          fi
+        working-directory: apps/cli
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: npm publish --provenance --access public
+        working-directory: apps/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  release-web-production:
+    name: Release web to Cloudflare production
+    needs: release-please
+    if: needs.release-please.outputs.web_released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - run: bun install --frozen-lockfile
+
+      - name: Apply D1 migrations (production)
+        run: bun run db:migrate:production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Build web app
+        run: bun run build
+        working-directory: apps/web
+
+      - name: Release to production
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/web
+          command: deploy --config wrangler.deploy.toml --env production
+
+  update-flake:
+    name: Update flake.nix npm hash
+    needs: [release-please, release-cli-npm]
+    if: needs.release-please.outputs.cli_released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: DeterminateSystems/nix-installer-action@21a544727d0c62386e78b4befe52d19ad12692e3 # v17
+
+      - name: Update hash
+        env:
+          VERSION: ${{ needs.release-please.outputs.cli_version }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format: $VERSION"
+            exit 1
+          fi
+
+          hash=$(nix-prefetch-url "https://registry.npmjs.org/@ronbun/cli/-/cli-${VERSION}.tgz" | xargs nix hash convert --to sri --hash-algo sha256)
+
+          sed -i "s|hash = \".*\"|hash = \"${hash}\"|" flake.nix
+
+      - name: Verify build
+        run: nix build .#cli
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
+        with:
+          title: "chore: update flake.nix hash for ${{ needs.release-please.outputs.cli_tag }}"
+          body: |
+            Automated hash update after npm publish of `${{ needs.release-please.outputs.cli_tag }}`.
+
+            `nix build .#cli` passed.
+          branch: "update-flake-hash-${{ needs.release-please.outputs.cli_tag }}"
+          commit-message: "chore: update flake.nix hash for ${{ needs.release-please.outputs.cli_tag }}"

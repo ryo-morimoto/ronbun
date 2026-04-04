@@ -8,3 +8,4 @@ dist/
 .omc/
 .lefthook-local.yml
 coverage/
+result
