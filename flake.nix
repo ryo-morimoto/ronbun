@@ -6,11 +6,11 @@
   outputs =
     { self, nixpkgs }:
     let
-      version = "0.2.0"; # x-release-please-version
+      version = "0.4.0"; # x-release-please-version
 
       src = {
         url = "https://registry.npmjs.org/@ronbun/cli/-/cli-${version}.tgz";
-        hash = "sha256-hTlkkcxiwxeJlO7aUdoANI2lCLOzdArMeaM/BqyzbY4=";
+        hash = "sha256-yNPq4WCokuMoN9s9yuUV6EPlOD/vUrgUGUDIvPi21Z8=";
       };
 
       supportedSystems = [
