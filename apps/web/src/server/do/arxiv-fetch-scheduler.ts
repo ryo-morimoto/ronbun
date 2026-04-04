@@ -87,19 +87,26 @@ export class ArxivFetchScheduler extends DurableObject<Env> {
     }
 
     const item = batch.items[batch.nextIndex];
+    const hasMore = batch.nextIndex + 1 < batch.items.length || batchQueue.length > 1;
 
     // Advance pointer BEFORE sending (at-most-once; content step is idempotent)
     batch.nextIndex++;
     await this.ctx.storage.put<BatchState>(`batch:${currentBatchId}`, batch);
 
-    // Send content fetch message to queue
-    await this.env.INGEST_QUEUE.send({
-      paperId: item.paperId,
-      arxivId: item.arxivId,
-    } satisfies QueueMessage);
+    try {
+      await this.env.INGEST_QUEUE.send({
+        paperId: item.paperId,
+        arxivId: item.arxivId,
+      } satisfies QueueMessage);
+    } catch (error) {
+      console.error(
+        `[DO scheduler] queue send failed for ${item.arxivId} (pointer already advanced, skipping):`,
+        error,
+      );
+    }
 
-    // Schedule next item
-    if (batch.nextIndex < batch.items.length || batchQueue.length > 1) {
+    // Always schedule next alarm to keep the chain alive
+    if (hasMore) {
       await this.ctx.storage.setAlarm(Date.now() + FETCH_INTERVAL_MS);
     }
   }

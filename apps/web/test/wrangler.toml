@@ -26,3 +26,10 @@ queue = "test-ingest"
 [[queues.producers]]
 binding = "INGEST_DLQ"
 queue = "test-ingest-dlq"
+
+[durable_objects]
+bindings = [{ name = "ARXIV_FETCH_SCHEDULER", class_name = "ArxivFetchScheduler" }]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ArxivFetchScheduler"]
