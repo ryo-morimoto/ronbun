@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.5.0](https://github.com/ryo-morimoto/ronbun/compare/web-v0.4.0...web-v0.5.0) (2026-04-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove MCP server support
+
+### Features
+
+* implement DO alarm scheduler and OAI-PMH metadata extraction ([831037e](https://github.com/ryo-morimoto/ronbun/commit/831037e709421b270106facffca694662307e5be))
+* remove MCP server support ([4833b13](https://github.com/ryo-morimoto/ronbun/commit/4833b13e55527b583ed8dd433fa30fc31152e41c))
+
+
+### Bug Fixes
+
+* prevent DO alarm chain from breaking on queue send failure ([9dae936](https://github.com/ryo-morimoto/ronbun/commit/9dae93692f99061f693bad7de8f621eb85a106d9))
+
 ## [0.4.0](https://github.com/ryo-morimoto/ronbun/compare/web-v0.3.0...web-v0.4.0) (2026-04-01)
 
 
