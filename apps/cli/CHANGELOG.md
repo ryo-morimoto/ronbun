@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/ryo-morimoto/ronbun/compare/cli-v0.4.0...cli-v0.5.0) (2026-04-04)
+
+
+### Features
+
+* implement DO alarm scheduler and OAI-PMH metadata extraction ([831037e](https://github.com/ryo-morimoto/ronbun/commit/831037e709421b270106facffca694662307e5be))
+
+
+### Bug Fixes
+
+* correct API auth docs and remove stale CLI env var references ([b972db3](https://github.com/ryo-morimoto/ronbun/commit/b972db398bfb282e4a861c215359c1d311b5487c))
+
 ## [0.4.0](https://github.com/ryo-morimoto/ronbun/compare/cli-v0.3.0...cli-v0.4.0) (2026-04-01)
 
 
